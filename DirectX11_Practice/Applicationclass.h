@@ -13,6 +13,8 @@
 #include "modelclass.h"
 #include "colorshaderclass.h"
 #include "TextureShaderClass.h"
+#include "LightClass.h"
+#include "LightShaderClass.h"
 
 /////////////
 // GLOBALS //
@@ -37,7 +39,7 @@ public:
 	bool Frame();
 
 private:
-	bool Render();
+	bool Render(float);
 
 private:
 	D3DClass* m_Direct3D;
@@ -45,6 +47,9 @@ private:
 	ModelClass* m_Model;
 	ColorShaderClass* m_ColorShader;
 	TextureShaderClass* m_TextureShader;
+
+	LightShaderClass* m_LightShader;
+	LightClass* m_Light;
 };
 
 #endif

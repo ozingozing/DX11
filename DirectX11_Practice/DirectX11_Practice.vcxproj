@@ -132,6 +132,8 @@
     <ClCompile Include="Colorshaderclass.cpp" />
     <ClCompile Include="D3dclass.cpp" />
     <ClCompile Include="Inputclass.cpp" />
+    <ClCompile Include="LightClass.cpp" />
+    <ClCompile Include="LightShaderClass.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Modelclass.cpp" />
     <ClCompile Include="Systemclass.cpp" />
@@ -144,6 +146,8 @@
     <ClInclude Include="Colorshaderclass.h" />
     <ClInclude Include="D3dclass.h" />
     <ClInclude Include="Inputclass.h" />
+    <ClInclude Include="LightClass.h" />
+    <ClInclude Include="LightShaderClass.h" />
     <ClInclude Include="Modelclass.h" />
     <ClInclude Include="Systemclass.h" />
     <ClInclude Include="TextureClass.h" />
@@ -152,6 +156,10 @@
   <ItemGroup>
     <FxCompile Include="Color.hlsl">
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">ColorPixelShader</EntryPointName>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+    </FxCompile>
+    <FxCompile Include="Light.hlsl">
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">LightPixelShader</EntryPointName>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
     </FxCompile>
     <FxCompile Include="Texture.hlsl">

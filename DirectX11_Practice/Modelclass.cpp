@@ -132,20 +132,25 @@ bool ModelClass::InitializeBuffers(ID3D11Device* device)
 		return false;
 	}
 
-	// 이제 정점 및 인덱스 배열에 삼각형의 세 점과 각 점에 대한 인덱스를 채웁니다.
-	// 점들을 시계 방향으로 생성한 것에 유의하십시오. 만약 반시계 방향으로 하면 후면 제거(back face culling) 때문에 삼각형이 반대 방향을 향한다고 인식하여 그려지지 않을 것입니다.
-	// GPU에 정점을 보내는 순서는 항상 매우 중요함을 기억하세요.
-	// 색상도 정점 설명의 일부이므로 여기서 설정합니다. 여기서는 녹색으로 설정했습니다.
-	// 정점 배열에 데이터를 로드합니다.
+	// InitializeBuffers 함수의 유일한 변경 사항은
+	// 정점 설정 부분입니다. 이제 각 정점에는
+	// 조명 계산을 위한 법선이 연결됩니다.
+	// 법선은 다각형의 면에 수직인 선으로,
+	// 면이 가리키는 정확한 방향을 계산할 수 있도록 합니다.
+	// 간단하게 설명하기 위해 각 정점의 Z축 성분을 -1.0f로
+	// 설정하여 법선이 보는 방향을 향하도록 했습니다.
 	// Load the vertex array with data.
 	vertices[0].position = XMFLOAT3(-1.0f, -1.0f, 0.0f);  // Bottom left.
 	vertices[0].texture = XMFLOAT2(0.0f, 1.0f);
+	vertices[0].normal = XMFLOAT3(0.0f, 0.0f, -1.0f);
 
 	vertices[1].position = XMFLOAT3(0.0f, 1.0f, 0.0f);  // Top middle.
 	vertices[1].texture = XMFLOAT2(0.5f, 0.0f);
+	vertices[1].normal = XMFLOAT3(0.0f, 0.0f, -1.0f);
 
 	vertices[2].position = XMFLOAT3(1.0f, -1.0f, 0.0f);  // Bottom right.
 	vertices[2].texture = XMFLOAT2(1.0f, 1.0f);
+	vertices[2].normal = XMFLOAT3(0.0f, 0.0f, -1.0f);
 
 	// Load the index array with data.
 	indices[0] = 0;  // Bottom left.
