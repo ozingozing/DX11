@@ -25,9 +25,13 @@ ApplicationClass::~ApplicationClass()
 {
 }
 
-
+// The model initialization now takes
+// in the filename of the model file it is loading.
+// In this tutorial we will use the cube.txt file
+// so this model loads in a 3D cube object for rendering.
 bool ApplicationClass::Initialize(int screenWidth, int screenHeight, HWND hwnd)
 {
+	char modelFilename[128];
 	char textureFilename[128];
 	bool result;
 
@@ -51,11 +55,14 @@ bool ApplicationClass::Initialize(int screenWidth, int screenHeight, HWND hwnd)
 	// Create and initialize the model object.
 	m_Model = new ModelClass;
 
+	// Set the file anme of the model.
+	strcpy_s(modelFilename, "../Resource/Cube.txt");
+
 	// Set the name of the texture file that we will be loading.
 	//C:\Users\sky2503\Desktop\stone01.tga
 	strcpy_s(textureFilename, "../Resource/texture01.png");
 
-	result = m_Model->Initialize(hwnd, m_Direct3D->GetDevice(), m_Direct3D->GetDeviceContext(), textureFilename);
+	result = m_Model->Initialize(m_Direct3D->GetDevice(), m_Direct3D->GetDeviceContext(), modelFilename, textureFilename);
 	if (!result)
 	{
 		MessageBox(hwnd, L"Could not initialize the model object.", L"Error", MB_OK);

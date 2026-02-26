@@ -27,7 +27,7 @@ TextureClass::~TextureClass()
 // 먼저 타가 데이터를 배열에 로드합니다. 그런 다음 텍스처를 생성하고 올바른 형식으로 타가 데이터를 로드합니다.
 // (타가 이미지는 기본적으로 뒤집혀 있으므로 뒤집어야 합니다.)
 // 텍스처가 로드되면 셰이더가 그리기에 사용할 수 있도록 텍스처에 대한 리소스 뷰를 생성합니다.
-bool TextureClass::Initialize(HWND hwnd, ID3D11Device* device, ID3D11DeviceContext* deviceContext, char* filename)
+bool TextureClass::Initialize(ID3D11Device* device, ID3D11DeviceContext* deviceContext, char* filename)
 {
 	bool result;
 	int height, width;

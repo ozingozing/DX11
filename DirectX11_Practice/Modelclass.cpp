@@ -10,6 +10,9 @@ ModelClass::ModelClass()
 	m_indexBuffer = 0;
 
 	m_Texture = 0;
+	m_model = 0;
+	m_indexCount = 0;
+	m_vertexCount = 0;
 }
 
 
@@ -22,34 +25,36 @@ ModelClass::~ModelClass()
 {
 }
 
-// Initialize 함수는 정점 및 인덱스 버퍼 초기화 함수를 호출합니다.
-bool ModelClass::Initialize(ID3D11Device* device)
+// 이제 Initialize 함수는 로드할 모델 파일 이름을
+// 입력으로 받습니다. 그리고 Initialize 함수 내에서
+// 먼저 새로운 LoadModel 함수를 호출합니다.
+// 이 함수는 제공된 파일 이름에서 모델 데이터를
+// 로드하여 새로운 m_model 배열에 저장합니다.
+// 이 모델 배열이 채워지면, 이를 기반으로
+// 정점 버퍼와 인덱스 버퍼를 생성할 수 있습니다.
+// InitializeBuffers 함수는 이제 이 모델 데이터에 의존하므로,
+// 함수들을 올바른 순서로 호출해야 합니다.
+bool ModelClass::Initialize(ID3D11Device* device, ID3D11DeviceContext* deviceContext, char* modelFilename, char* textureFilename)
 {
 	bool result;
 
-	// 정점 및 인덱스 버퍼를 초기화합니다.
+
+	// Load in the model data.
+	result = LoadModel(modelFilename);
+	if (!result)
+	{
+		return false;
+	}
+
+	// Initialize the vertex and index buffers.
 	result = InitializeBuffers(device);
 	if (!result)
 	{
 		return false;
 	}
 
-	return true;
-}
-
-bool ModelClass::Initialize(HWND hwnd, ID3D11Device* device, ID3D11DeviceContext* deviceContext, char* textureFilename)
-{
-	bool result;
-
-	// 버텍스 및 인덱스 버퍼를 초기화합니다.
-	result = InitializeBuffers(device);
-	if (!result)
-	{
-		return false;
-	}
-	// Initialize 함수는 이제 텍스처를 로드하는 새로운 비공개(private) 함수를 호출합니다.
-	// 이 모델에 사용할 텍스처를 로드합니다.
-	result = LoadTexture(hwnd, device, deviceContext, textureFilename);
+	// Load the texture for this model.
+	result = LoadTexture(device, deviceContext, textureFilename);
 	if (!result)
 	{
 		return false;
@@ -61,6 +66,8 @@ bool ModelClass::Initialize(HWND hwnd, ID3D11Device* device, ID3D11DeviceContext
 // Shutdown 함수는 정점 및 인덱스 버퍼 종료 함수를 호출합니다.
 void ModelClass::Shutdown()
 {
+	// Release the model texture.
+	ReleaseTexture();
 	/*
 	* Shutdown 함수는 이제 초기화 중에 로드되었던 텍스처 객체를
 	* 해제하기 위해 새로운 비공개(private) 함수를 호출합니다.
@@ -110,52 +117,21 @@ bool ModelClass::InitializeBuffers(ID3D11Device* device)
 	D3D11_BUFFER_DESC vertexBufferDesc, indexBufferDesc;
 	D3D11_SUBRESOURCE_DATA vertexData, indexData;
 	HRESULT result;
+	int i;
 
-	// 최종 버퍼에 데이터를 채우기 위해 사용할 정점 및 인덱스 데이터 임시 배열을 먼저 생성합니다.
-	// 정점 배열의 정점 수를 설정합니다.
-	m_vertexCount = 4;
-
-	// 인덱스 배열의 인덱스 수를 설정합니다.
-	m_indexCount = 6;
-
-	// 정점 배열을 생성합니다.
+	// Create the vertex array
 	vertices = new VertexType[m_vertexCount];
-	if (!vertices)
-	{
-		return false;
-	}
-
-	// 인덱스 배열을 생성합니다.
+	// Create the index array
 	indices = new unsigned long[m_indexCount];
-	if (!indices)
+	// Load rhe vertex and index array with data.
+	for (i = 0; i < m_vertexCount; i++)
 	{
-		return false;
+		vertices[i].position = XMFLOAT3(m_model[i].x, m_model[i].y, m_model[i].z);
+		vertices[i].texture = XMFLOAT2(m_model[i].tu, m_model[i].tv);
+		vertices[i].normal = XMFLOAT3(m_model[i].nx, m_model[i].ny, m_model[i].nz);
+
+		indices[i] = i;
 	}
-
-	// InitializeBuffers 함수의 유일한 변경 사항은
-	// 정점 설정 부분입니다. 이제 각 정점에는
-	// 조명 계산을 위한 법선이 연결됩니다.
-	// 법선은 다각형의 면에 수직인 선으로,
-	// 면이 가리키는 정확한 방향을 계산할 수 있도록 합니다.
-	// 간단하게 설명하기 위해 각 정점의 Z축 성분을 -1.0f로
-	// 설정하여 법선이 보는 방향을 향하도록 했습니다.
-	// Load the vertex array with data.
-	vertices[0].position = XMFLOAT3(-1.0f, -1.0f, 0.0f);  // Bottom left.
-	vertices[0].texture = XMFLOAT2(0.0f, 1.0f);
-	vertices[0].normal = XMFLOAT3(0.0f, 0.0f, -1.0f);
-
-	vertices[1].position = XMFLOAT3(0.0f, 1.0f, 0.0f);  // Top middle.
-	vertices[1].texture = XMFLOAT2(0.5f, 0.0f);
-	vertices[1].normal = XMFLOAT3(0.0f, 0.0f, -1.0f);
-
-	vertices[2].position = XMFLOAT3(1.0f, -1.0f, 0.0f);  // Bottom right.
-	vertices[2].texture = XMFLOAT2(1.0f, 1.0f);
-	vertices[2].normal = XMFLOAT3(0.0f, 0.0f, -1.0f);
-
-	// Load the index array with data.
-	indices[0] = 0;  // Bottom left.
-	indices[1] = 1;  // Top middle.
-	indices[2] = 2;  // Bottom right.
 
 	// 정점 및 인덱스 배열이 채워졌으므로 이제 이를 사용하여 정점 버퍼와 인덱스 버퍼를 생성할 수 있습니다.
 	// 두 버퍼를 생성하는 방식은 동일합니다. 먼저 버퍼에 대한 설명(description)을 채웁니다.
@@ -369,7 +345,7 @@ void ModelClass::RenderBuffers(ID3D11DeviceContext* deviceContext)
 }
 
 //LoadTexture is a new private function that will create the texture object and then initialize it with the input file name provided.This function is called during initialization.
-bool ModelClass::LoadTexture(HWND hwnd, ID3D11Device* device, ID3D11DeviceContext* deviceContext, char* filename)
+bool ModelClass::LoadTexture(ID3D11Device* device, ID3D11DeviceContext* deviceContext, char* filename)
 {
 	bool result;
 
@@ -377,7 +353,7 @@ bool ModelClass::LoadTexture(HWND hwnd, ID3D11Device* device, ID3D11DeviceContex
 	// Create and initialize the texture object.
 	m_Texture = new TextureClass;
 
-	result = m_Texture->Initialize(hwnd, device, deviceContext, filename);
+	result = m_Texture->Initialize(device, deviceContext, filename);
 	if (!result)
 	{
 		return false;
@@ -385,6 +361,7 @@ bool ModelClass::LoadTexture(HWND hwnd, ID3D11Device* device, ID3D11DeviceContex
 
 	return true;
 }
+
 
 //The ReleaseTexture function will release the texture object that was created and loaded during the LoadTexture function.
 void ModelClass::ReleaseTexture()
@@ -397,5 +374,79 @@ void ModelClass::ReleaseTexture()
 		m_Texture = 0;
 	}
 
+	return;
+}
+
+// 이 함수는 텍스트 파일에서 모델 데이터를
+// m_model 배열 변수로 불러오는 기능을 담당하는
+// 새로운 LoadModel 함수입니다.
+// 먼저 텍스트 파일을 열고 정점 개수를 읽어옵니다.
+// 정점 개수를 읽어온 후에는 ModelType 배열을 생성하고
+// 각 행을 배열에 읽어들입니다.
+// 이제 이 함수에서 정점 개수와 인덱스 개수가 모두 설정됩니다.
+bool ModelClass::LoadModel(char* filename)
+{
+	ifstream fin;
+	char input;
+	int i;
+
+	// Open the model file.
+	fin.open(filename);
+
+	// if it could not open the file then exit.
+	if (fin.fail())
+	{
+		return false;
+	}
+
+	// Read up to the value of vertex count.
+	fin.get(input);
+	while (input != ':')
+	{
+		fin.get(input);
+	}
+
+	// Read in the vertex count.
+	fin >> m_vertexCount;
+
+	// Set the number of indices to be the same as the vertex count.
+	m_indexCount = m_vertexCount;
+
+	// Create the model using the vertex count that was read in.
+	m_model = new ModelType[m_vertexCount];
+
+	// Read up to the beginning of the data.
+	fin.get(input);
+	while (input != ':')
+	{
+		fin.get(input);
+	}
+	fin.get(input);
+	fin.get(input);
+
+	// Read in the vertex data.
+	for (i = 0; i < m_vertexCount; i++)
+	{
+		fin >> m_model[i].x >> m_model[i].y >> m_model[i].z;
+		fin >> m_model[i].tu >> m_model[i].tv;
+		fin >> m_model[i].nx >> m_model[i].ny >> m_model[i].nz;
+	}
+
+	// Close the model file.
+	fin.close();
+
+	return true;
+}
+
+// The ReleaseModel function handles
+// deleting the model data array.
+void ModelClass::ReleaseModel()
+{
+	// Release the model data.
+	if (m_model)
+	{
+		delete[] m_model;
+		m_model = 0;
+	}
 	return;
 }

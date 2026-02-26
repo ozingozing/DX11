@@ -8,7 +8,9 @@
 //////////////
 #include <d3d11.h>
 #include <directxmath.h>
+#include <fstream>
 using namespace DirectX;
+using namespace std;
 
 ///////////////////////
 // MY CLASS INCLUDES //
@@ -29,6 +31,16 @@ class ModelClass
 		XMFLOAT3 normal;
 	};
 
+	// 다음 변경 사항은 모델 파일 형식을 표현하기 위한 새로운 구조체의 추가입니다.
+	// 이 구조체의 이름은 ModelType입니다.
+	// 이 구조체는 파일 형식과 동일하게 위치(position), 텍스처(texture), 법선(normal) 벡터를 포함합니다.
+	struct ModelType
+	{
+		float x, y, z;   // 위치 좌표
+		float tu, tv;    // 텍스처 좌표
+		float nx, ny, nz;// 법선 벡터
+	};
+
 public:
 	ModelClass();
 	ModelClass(const ModelClass&);
@@ -36,8 +48,9 @@ public:
 
 	// 아래 함수들은 모델의 정점 및 인덱스 버퍼를 초기화하고 해제하는 역할을 합니다.
 	// Render 함수는 모델의 기하학적 구조를 비디오 카드에 올려 컬러 셰이더가 그릴 수 있도록 준비합니다.
-	bool Initialize(ID3D11Device*);
-	bool Initialize(HWND hwnd, ID3D11Device*, ID3D11DeviceContext*, char*);
+	
+	// Initialize 함수는 이제 로드할 모델 파일 이름과 텍스처 파일 이름을 입력으로 받습니다.
+	bool Initialize(ID3D11Device*, ID3D11DeviceContext*, char*, char*);
 	void Shutdown();
 	void Render(ID3D11DeviceContext*);
 
@@ -75,9 +88,14 @@ private:
 	* 캡슐화하여, 외부 코드가 복잡한 리소스 관리 과정에
 	* 관여할 필요가 없게 만듭니다.
 	*/
-	bool LoadTexture(HWND hwnd, ID3D11Device*, ID3D11DeviceContext*, char*);
+	bool LoadTexture(ID3D11Device*, ID3D11DeviceContext*, char*);
 	void ReleaseTexture();
 
+	// 텍스트 파일에서 모델 데이터를 로드하고 해제하기 위한 새로운 함수들입니다.
+	bool LoadModel(char*);
+	void ReleaseModel();
+
+private:
 	// ModelClass의 private 변수들은 정점 및 인덱스 버퍼이며, 각 버퍼의 크기를 추적하기 위한 두 개의 정수 변수입니다.
 	// 참고로, 모든 DirectX 11 버퍼는 일반적으로 ID3D11Buffer라는 일반적인 타입을 사용하며, 처음 생성될 때 버퍼 설명(buffer description)에 의해 더 명확하게 식별됩니다.
 	ID3D11Buffer* m_vertexBuffer, * m_indexBuffer;
@@ -85,6 +103,12 @@ private:
 
 	// m_Texture 변수는 이 모델의 텍스처 리소스를 로드, 해제 및 접근하는 데 사용됩니다.
 	TextureClass* m_Texture;
+
+	// 마지막 변경 사항은 m_model이라는 새로운 private 변수입니다.
+	// 이 변수는 ModelType 구조체 배열로 선언됩니다.
+	// 이 변수는 모델 데이터를 텍스트 파일에서 읽어온 후,
+	// 버텍스 버퍼에 저장하기 전에 임시로 보관하는 용도로 사용됩니다.
+	ModelType* m_model;
 };
 
 #endif

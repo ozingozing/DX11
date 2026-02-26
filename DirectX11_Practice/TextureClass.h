@@ -35,7 +35,7 @@ public:
     ~TextureClass();
 
     // 텍스처를 초기화하는 함수입니다.
-    bool Initialize(HWND hwnd, ID3D11Device*, ID3D11DeviceContext*, char*);
+    bool Initialize(ID3D11Device*, ID3D11DeviceContext*, char*);
     // 텍스처 리소스를 해제하는 함수입니다.
     void Shutdown();
 
