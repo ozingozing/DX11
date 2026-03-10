@@ -50,13 +50,14 @@ bool ApplicationClass::Initialize(int screenWidth, int screenHeight, HWND hwnd)
 	m_Camera = new CameraClass;
 
 	// Set the initial position of the camera.
-	m_Camera->SetPosition(0.0f, 0.0f, -5.0f);
+	m_Camera->SetPosition(0.0f, 50.f, -300.0f);
 
 	// Create and initialize the model object.
 	m_Model = new ModelClass;
 
 	// Set the file anme of the model.
-	strcpy_s(modelFilename, "../Resource/Cube.txt");
+	//strcpy_s(modelFilename, "../Resource/Cube.txt");
+	strcpy_s(modelFilename, "../Resource/Man.fbx");
 
 	// Set the name of the texture file that we will be loading.
 	//C:\Users\sky2503\Desktop\stone01.tga

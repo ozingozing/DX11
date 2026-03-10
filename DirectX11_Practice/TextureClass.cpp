@@ -3,7 +3,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
-
 #include "textureclass.h"
 
 // 클래스 생성자에서 세 개의 포인터를 null로 초기화합니다.
@@ -142,6 +141,21 @@ ID3D11ShaderResourceView* TextureClass::GetTexture()
 	return m_textureView;
 }
 
+// FBX 내장 텍스처 데이터를 메모리에서 바로 읽어오는 함수 추가
+bool TextureClass::LoadFromMemory(unsigned char* data, int size)
+{
+	int channels;
+	// 파일 경로 대신 메모리 주소(data)와 크기(size)를 인자로 사용
+	m_targaData = stbi_load_from_memory(data, size, &m_width, &m_height, &channels, STBI_rgb_alpha);
+
+	if (!m_targaData)
+	{
+		return false;
+	}
+
+	return true;
+}
+
 // TextureClass 클래스의 멤버 함수로 추가
 bool TextureClass::LoadImageFile(const char* filename)
 {
@@ -154,6 +168,85 @@ bool TextureClass::LoadImageFile(const char* filename)
 	{
 		return false;
 	}
+
+	return true;
+}
+
+bool TextureClass::InitializeFromEmbedded(ID3D11Device* device, ID3D11DeviceContext* deviceContext, const aiTexture* texture)
+{
+	if (!texture)
+		return false;
+
+	// 1) 압축 이미지(PNG/JPG 등) 바이트 데이터
+	if (texture->mHeight == 0)
+	{
+		int channels = 0;
+		m_targaData = stbi_load_from_memory(
+			reinterpret_cast<const unsigned char*>(texture->pcData),
+			texture->mWidth,
+			&m_width,
+			&m_height,
+			&channels,
+			STBI_rgb_alpha
+		);
+
+		if (!m_targaData)
+			return false;
+	}
+	// 2) 비압축 RGBA texel 배열
+	else
+	{
+		m_width = texture->mWidth;
+		m_height = texture->mHeight;
+
+		const int imageSize = m_width * m_height * 4;
+		m_targaData = new unsigned char[imageSize];
+		if (!m_targaData)
+			return false;
+
+		for (int i = 0; i < m_width * m_height; i++)
+		{
+			// aiTexel = BGRA 순서인 경우가 많아 swizzle 필요할 수 있음
+			m_targaData[i * 4 + 0] = texture->pcData[i].r;
+			m_targaData[i * 4 + 1] = texture->pcData[i].g;
+			m_targaData[i * 4 + 2] = texture->pcData[i].b;
+			m_targaData[i * 4 + 3] = texture->pcData[i].a;
+		}
+	}
+
+	// 아래는 기존 Initialize와 동일
+	D3D11_TEXTURE2D_DESC textureDesc = {};
+	textureDesc.Height = m_height;
+	textureDesc.Width = m_width;
+	textureDesc.MipLevels = 0;
+	textureDesc.ArraySize = 1;
+	textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	textureDesc.SampleDesc.Count = 1;
+	textureDesc.Usage = D3D11_USAGE_DEFAULT;
+	textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
+	textureDesc.MiscFlags = D3D11_RESOURCE_MISC_GENERATE_MIPS;
+
+	HRESULT hResult = device->CreateTexture2D(&textureDesc, NULL, &m_texture);
+	if (FAILED(hResult))
+		return false;
+
+	unsigned int rowPitch = m_width * 4;
+	deviceContext->UpdateSubresource(m_texture, 0, NULL, m_targaData, rowPitch, 0);
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Format = textureDesc.Format;
+	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Texture2D.MostDetailedMip = 0;
+	srvDesc.Texture2D.MipLevels = -1;
+
+	hResult = device->CreateShaderResourceView(m_texture, &srvDesc, &m_textureView);
+	if (FAILED(hResult))
+		return false;
+
+	deviceContext->GenerateMips(m_textureView);
+
+	delete[] m_targaData;
+	m_targaData = 0;
 
 	return true;
 }
@@ -261,4 +354,152 @@ int TextureClass::GetWidth()
 int TextureClass::GetHeight()
 {
 	return m_height;
+}
+
+// 메모리에 들어 있는 "압축 이미지 바이트(PNG/JPG 등)"를 받아
+// DirectX 텍스처와 Shader Resource View를 생성하는 함수
+bool TextureClass::InitializeFromMemory(ID3D11Device* device, ID3D11DeviceContext* deviceContext, const unsigned char* data, int size)
+{
+	// 전달받은 메모리 바이트를 stb_image로 디코딩하여
+	// RGBA 32비트 픽셀 데이터(m_targaData)로 변환합니다.
+	// 이 과정에서 이미지의 실제 width / height도 함께 얻어옵니다.
+	if (!LoadFromMemory(const_cast<unsigned char*>(data), size))
+	{
+		return false;
+	}
+
+	// 생성할 DirectX 2D 텍스처의 속성을 설정합니다.
+	// - Width / Height : 디코딩된 이미지의 실제 크기
+	// - MipLevels = 0  : 전체 밉맵 체인을 자동 생성할 수 있도록 설정
+	// - Format         : RGBA 8비트씩 사용하는 일반적인 컬러 포맷
+	// - BindFlags      : 셰이더 리소스로도 쓰고, 밉맵 생성용 렌더 타겟으로도 사용
+	D3D11_TEXTURE2D_DESC textureDesc = {};
+	textureDesc.Height = m_height;
+	textureDesc.Width = m_width;
+	textureDesc.MipLevels = 0;
+	textureDesc.ArraySize = 1;
+	textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	textureDesc.SampleDesc.Count = 1;
+	textureDesc.SampleDesc.Quality = 0;
+	textureDesc.Usage = D3D11_USAGE_DEFAULT;
+	textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
+	textureDesc.CPUAccessFlags = 0;
+	textureDesc.MiscFlags = D3D11_RESOURCE_MISC_GENERATE_MIPS;
+
+	// 비어 있는 GPU 텍스처 리소스를 생성합니다.
+	HRESULT hResult = device->CreateTexture2D(&textureDesc, NULL, &m_texture);
+	if (FAILED(hResult))
+	{
+		return false;
+	}
+
+	// 한 줄(row)당 바이트 수를 계산합니다.
+	// RGBA 32비트 포맷이므로 픽셀당 4바이트입니다.
+	unsigned int rowPitch = m_width * 4;
+
+	// CPU 메모리에 있는 픽셀 데이터(m_targaData)를
+	// GPU 텍스처(m_texture)에 업로드합니다.
+	deviceContext->UpdateSubresource(m_texture, 0, NULL, m_targaData, rowPitch, 0);
+
+	// 셰이더에서 사용할 수 있도록 Shader Resource View 설명을 설정합니다.
+	// MipLevels = -1 로 두면 생성 가능한 전체 밉맵 체인을 사용합니다.
+	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Format = textureDesc.Format;
+	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Texture2D.MostDetailedMip = 0;
+	srvDesc.Texture2D.MipLevels = -1;
+
+	// 텍스처에 대한 SRV를 생성합니다.
+	// 이후 픽셀 셰이더 등에서 이 텍스처를 바인딩해서 사용할 수 있습니다.
+	hResult = device->CreateShaderResourceView(m_texture, &srvDesc, &m_textureView);
+	if (FAILED(hResult))
+	{
+		return false;
+	}
+
+	// 업로드된 원본 텍스처를 기반으로 밉맵을 자동 생성합니다.
+	deviceContext->GenerateMips(m_textureView);
+
+	// CPU 쪽 임시 이미지 버퍼는 이제 GPU에 복사되었으므로 해제합니다.
+	delete[] m_targaData;
+	m_targaData = 0;
+
+	return true;
+}
+
+
+// 이미 압축이 풀려 있는 "RGBA raw 픽셀 데이터"를 받아
+// DirectX 텍스처와 Shader Resource View를 생성하는 함수
+bool TextureClass::InitializeFromRawRGBA(ID3D11Device* device, ID3D11DeviceContext* deviceContext, const unsigned char* data, int width, int height)
+{
+	// 전달받은 raw 픽셀 데이터의 실제 이미지 크기를 저장합니다.
+	m_width = width;
+	m_height = height;
+
+	// RGBA 32비트 포맷이므로 픽셀당 4바이트입니다.
+	// 전체 이미지 크기 = width * height * 4
+	int imageSize = m_width * m_height * 4;
+
+	// CPU 임시 버퍼를 할당합니다.
+	// 전달받은 raw 데이터를 이 버퍼로 복사해 이후 GPU에 업로드합니다.
+	m_targaData = new unsigned char[imageSize];
+	if (!m_targaData)
+	{
+		return false;
+	}
+
+	// 외부에서 들어온 raw RGBA 데이터를 내부 버퍼로 복사합니다.
+	memcpy(m_targaData, data, imageSize);
+
+	// 생성할 DirectX 2D 텍스처의 속성을 설정합니다.
+	// 압축이 이미 풀린 상태이므로 바로 RGBA 텍스처로 생성할 수 있습니다.
+	D3D11_TEXTURE2D_DESC textureDesc = {};
+	textureDesc.Height = m_height;
+	textureDesc.Width = m_width;
+	textureDesc.MipLevels = 0;
+	textureDesc.ArraySize = 1;
+	textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	textureDesc.SampleDesc.Count = 1;
+	textureDesc.SampleDesc.Quality = 0;
+	textureDesc.Usage = D3D11_USAGE_DEFAULT;
+	textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
+	textureDesc.CPUAccessFlags = 0;
+	textureDesc.MiscFlags = D3D11_RESOURCE_MISC_GENERATE_MIPS;
+
+	// GPU 상의 빈 2D 텍스처를 생성합니다.
+	HRESULT hResult = device->CreateTexture2D(&textureDesc, NULL, &m_texture);
+	if (FAILED(hResult))
+	{
+		return false;
+	}
+
+	// 한 줄(row)당 바이트 수 계산
+	// RGBA 포맷이므로 가로 픽셀 수 * 4
+	unsigned int rowPitch = m_width * 4;
+
+	// CPU 버퍼에 있는 raw RGBA 데이터를 GPU 텍스처에 복사합니다.
+	deviceContext->UpdateSubresource(m_texture, 0, NULL, m_targaData, rowPitch, 0);
+
+	// 셰이더에서 접근 가능한 SRV를 만들기 위한 설명 구조체 설정
+	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Format = textureDesc.Format;
+	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Texture2D.MostDetailedMip = 0;
+	srvDesc.Texture2D.MipLevels = -1;
+
+	// Shader Resource View 생성
+	hResult = device->CreateShaderResourceView(m_texture, &srvDesc, &m_textureView);
+	if (FAILED(hResult))
+	{
+		return false;
+	}
+
+	// 텍스처를 다양한 거리에서 더 부드럽게 보이도록 밉맵 자동 생성
+	deviceContext->GenerateMips(m_textureView);
+
+	// GPU 업로드가 끝났으므로 CPU 임시 버퍼는 해제합니다.
+	delete[] m_targaData;
+	m_targaData = 0;
+
+	return true;
 }

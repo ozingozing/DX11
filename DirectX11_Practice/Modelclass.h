@@ -94,7 +94,6 @@ private:
 	// 텍스트 파일에서 모델 데이터를 로드하고 해제하기 위한 새로운 함수들입니다.
 	bool LoadModel(char*);
 	void ReleaseModel();
-
 private:
 	// ModelClass의 private 변수들은 정점 및 인덱스 버퍼이며, 각 버퍼의 크기를 추적하기 위한 두 개의 정수 변수입니다.
 	// 참고로, 모든 DirectX 11 버퍼는 일반적으로 ID3D11Buffer라는 일반적인 타입을 사용하며, 처음 생성될 때 버퍼 설명(buffer description)에 의해 더 명확하게 식별됩니다.
@@ -109,6 +108,15 @@ private:
 	// 이 변수는 모델 데이터를 텍스트 파일에서 읽어온 후,
 	// 버텍스 버퍼에 저장하기 전에 임시로 보관하는 용도로 사용됩니다.
 	ModelType* m_model;
+	unsigned long* m_modelIndices;
+
+private:
+	std::string m_texturePath;
+	bool m_hasEmbeddedTexture;
+	bool m_embeddedCompressed;   // mHeight == 0 이면 true
+	std::vector<unsigned char> m_embeddedTextureData;
+	int m_embeddedWidth;
+	int m_embeddedHeight;
 };
 
 #endif

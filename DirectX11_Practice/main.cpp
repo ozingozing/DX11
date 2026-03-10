@@ -5,12 +5,11 @@
 #include <Windows.h>
 #include "systemclass.h"
 
-
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR pScmdline, int iCmdshow)
 {
 	SystemClass* System;
 	bool result;
-
+	
 
 	// 시스템 객체를 생성합니다.
 	System = new SystemClass;

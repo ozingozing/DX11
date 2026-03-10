@@ -12,6 +12,9 @@
 #include <d3d11.h>
 #include <stdio.h>
 
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
 
 ////////////////////////////////////////////////////////////////////////////////
 // Class name: TextureClass
@@ -41,12 +44,16 @@ public:
 
     // 셰이더 리소스 뷰를 반환하는 함수입니다.
     ID3D11ShaderResourceView* GetTexture();
-
+    bool LoadFromMemory(unsigned char* data, int size);
     bool LoadImageFile(const char* filename);
+    bool InitializeFromEmbedded(ID3D11Device* device, ID3D11DeviceContext* deviceContext, const aiTexture* texture);
 
     // 텍스처의 너비와 높이를 반환하는 함수입니다.
     int GetWidth();
     int GetHeight();
+
+    bool InitializeFromMemory(ID3D11Device* device, ID3D11DeviceContext* deviceContext, const unsigned char* data, int size);
+    bool InitializeFromRawRGBA(ID3D11Device* device, ID3D11DeviceContext* deviceContext, const unsigned char* data, int width, int height);
 
 private:
     // 타가 파일 읽기 함수입니다. 더 많은 형식을 지원하려면 여기에 읽기 함수를 추가할 수 있습니다.
