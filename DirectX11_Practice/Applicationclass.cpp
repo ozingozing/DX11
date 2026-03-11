@@ -194,7 +194,7 @@ bool ApplicationClass::Frame()
 // 6. 출력: 초록색 삼각형이 백 버퍼(Back Buffer)에 그려지면, EndScene을 호출하여 완성된 장면을 실제 화면에 표시합니다.
 bool ApplicationClass::Render(float rotation)
 {
-	XMMATRIX worldMatrix, viewMatrix, projectionMatrix;
+	XMMATRIX worldMatrix, viewMatrix, projectionMatrix, rotateMatrix, translateMatrix, scaleMatrix, srMatrix;
 	bool result;
 
 
@@ -209,19 +209,66 @@ bool ApplicationClass::Render(float rotation)
 	m_Camera->GetViewMatrix(viewMatrix);
 	m_Direct3D->GetProjectionMatrix(projectionMatrix);
 
-	// Rotate the world matrix by the rotation value so that the triangle will spin.
-	worldMatrix = XMMatrixRotationY(rotation);
+	// 1. Y축 기준 회전 행렬 생성 (rotation 변수 사용)
+	rotateMatrix = XMMatrixRotationY(rotation);
 
-	// Put the model vertex and index buffers on the graphics pipeline to prepare them for drawing.
+	// 2. 이동 행렬 생성 (큐브를 왼쪽으로 2유닛 이동)
+	translateMatrix = XMMatrixTranslation(-2.0f, 0.0f, 0.0f);
+
+	// 3. 두 행렬을 곱하여 최종 월드 변환 행렬 생성 (회전 -> 이동 순서)
+	worldMatrix = XMMatrixMultiply(rotateMatrix, translateMatrix);
+
+	// 모델의 정점(Vertex) 및 인덱스(Index) 버퍼를 그래픽 파이프라인에 설정하여 그릴 준비를 합니다.
 	m_Model->Render(m_Direct3D->GetDeviceContext());
 
-	// Render the model using the light shader.
+	// 라이트 쉐이더를 사용하여 모델을 렌더링합니다.
+	// 월드, 뷰, 투영 행렬과 함께 텍스처, 조명 방향, 조명 색상 정보를 전달합니다.
 	result = m_LightShader->Render(m_Direct3D->GetDeviceContext(), m_Model->GetIndexCount(), worldMatrix, viewMatrix, projectionMatrix, m_Model->GetTexture(),
 		m_Light->GetDirection(), m_Light->GetDiffuseColor());
 	if (!result)
 	{
 		return false;
 	}
+
+	// 1. 크기 조절 행렬 생성 (모든 축에 대해 0.5배로 균등하게 축소)
+	scaleMatrix = XMMatrixScaling(0.5f, 0.5f, 0.5f);
+
+	// 2. 회전 행렬 생성 (첫 번째 큐브와 동일한 Y축 회전 적용)
+	rotateMatrix = XMMatrixRotationY(rotation);
+
+	// 3. 이동 행렬 생성 (반대 방향인 오른쪽으로 20유닛 이동)
+	translateMatrix = XMMatrixTranslation(20.f, 0.0f, 0.0f);
+
+	// 4. SRT 순서(Scale -> Rotate -> Translate)에 맞춰 행렬을 결합합니다.
+	// 먼저 크기 조절과 회전을 곱합니다.
+	srMatrix = XMMatrixMultiply(scaleMatrix, rotateMatrix);
+	// 그 결과에 이동 행렬을 곱하여 최종 월드 변환 행렬을 완성합니다.
+	worldMatrix = XMMatrixMultiply(srMatrix, translateMatrix);
+
+	// 모델 버퍼를 다시 준비합니다.
+	m_Model->Render(m_Direct3D->GetDeviceContext());
+
+	// 새로운 월드 행렬을 적용하여 두 번째 큐브를 화면에 렌더링합니다.
+	result = m_LightShader->Render(m_Direct3D->GetDeviceContext(), m_Model->GetIndexCount(), worldMatrix, viewMatrix, projectionMatrix, m_Model->GetTexture(),
+		m_Light->GetDirection(), m_Light->GetDiffuseColor());
+	if (!result)
+	{
+		return false;
+	}
+
+	//// Rotate the world matrix by the rotation value so that the triangle will spin.
+	//worldMatrix = XMMatrixRotationY(rotation);
+
+	//// Put the model vertex and index buffers on the graphics pipeline to prepare them for drawing.
+	//m_Model->Render(m_Direct3D->GetDeviceContext());
+
+	//// Render the model using the light shader.
+	//result = m_LightShader->Render(m_Direct3D->GetDeviceContext(), m_Model->GetIndexCount(), worldMatrix, viewMatrix, projectionMatrix, m_Model->GetTexture(),
+	//	m_Light->GetDirection(), m_Light->GetDiffuseColor());
+	//if (!result)
+	//{
+	//	return false;
+	//}
 
 	// Present the rendered scene to the screen.
 	m_Direct3D->EndScene();
