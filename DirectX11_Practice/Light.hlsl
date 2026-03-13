@@ -93,7 +93,7 @@ float4 LightPixelShader(PixelInputType input) : SV_TARGET
     lightIntensity = saturate(dot(input.normal, lightDir));
 
     // 4. 광원의 확산색상과 계산된 세기를 곱하여 최종 조명 색상 결정
-    //color = saturate(diffuseColor * lightIntensity);
+    color = saturate(diffuseColor * lightIntensity);
 
     float4 diffuse = diffuseColor * lightIntensity;
     float4 ambient = ambientColor;

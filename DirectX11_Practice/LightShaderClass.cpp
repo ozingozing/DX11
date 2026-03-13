@@ -69,13 +69,13 @@ void LightShaderClass::Shutdown()
 // Render 함수는 이제 조명 방향(light direction)과 조명 확산색(diffuse color)을 입력으로 받습니다.
 // 이 변수들은 SetShaderParameters 함수로 전달되어 최종적으로 셰이더 내부에서 설정됩니다.
 bool LightShaderClass::Render(ID3D11DeviceContext* deviceContext, int indexCount, XMMATRIX worldMatrix, XMMATRIX viewMatrix, XMMATRIX projectionMatrix,
-    ID3D11ShaderResourceView* texture, XMFLOAT3 lightDirection, XMFLOAT4 diffuseColor)
+    ID3D11ShaderResourceView* texture, XMFLOAT3 lightDirection, XMFLOAT4 ambientColor, XMFLOAT4 diffuseColor)
 {
     bool result;
 
 
     // 렌더링에 사용할 셰이더 파라미터들을 설정합니다.
-    result = SetShaderParameters(deviceContext, worldMatrix, viewMatrix, projectionMatrix, texture, lightDirection, diffuseColor);
+    result = SetShaderParameters(deviceContext, worldMatrix, viewMatrix, projectionMatrix, texture, lightDirection, ambientColor,diffuseColor);
     if (!result)
     {
         return false;
@@ -361,7 +361,7 @@ void LightShaderClass::OutputShaderErrorMessage(ID3D10Blob* errorMessage, HWND h
 
 // SetShaderParameters 함수는 이제 lightDirection과 diffuseColor를 입력으로 받습니다.
 bool LightShaderClass::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMMATRIX worldMatrix, XMMATRIX viewMatrix, XMMATRIX projectionMatrix,
-    ID3D11ShaderResourceView* texture, XMFLOAT3 lightDirection, XMFLOAT4 diffuseColor)
+    ID3D11ShaderResourceView* texture, XMFLOAT3 lightDirection, XMFLOAT4 ambientColor, XMFLOAT4 diffuseColor)
 {
     HRESULT result;
     D3D11_MAPPED_SUBRESOURCE mappedResource;
@@ -421,7 +421,7 @@ bool LightShaderClass::SetShaderParameters(ID3D11DeviceContext* deviceContext, X
     dataPtr2->diffuseColor = diffuseColor;
     dataPtr2->lightDirection = lightDirection;
     dataPtr2->padding = 0.0f;
-	dataPtr2->ambientColor = XMFLOAT4(1.f, 1.0f, 1.0f, 1.0f); // 간단한 고정된 주변광 색상 설정
+    dataPtr2->ambientColor = ambientColor;
 
     // 상수 버퍼의 잠금을 해제합니다.
     deviceContext->Unmap(m_lightBuffer, 0);

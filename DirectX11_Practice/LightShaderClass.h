@@ -50,7 +50,7 @@ public:
 
     // 렌더링 실행: 행렬, 텍스처, 조명 방향 및 색상을 인자로 받음
     bool Render(ID3D11DeviceContext*, int, XMMATRIX, XMMATRIX, XMMATRIX,
-        ID3D11ShaderResourceView*, XMFLOAT3, XMFLOAT4);
+        ID3D11ShaderResourceView*, XMFLOAT3, XMFLOAT4, XMFLOAT4);
 
 private:
     bool InitializeShader(ID3D11Device*, HWND, WCHAR*, WCHAR*);
@@ -59,7 +59,7 @@ private:
 
     // 실제 GPU 버퍼에 값을 쓰는 내부 함수
     bool SetShaderParameters(ID3D11DeviceContext*, XMMATRIX, XMMATRIX, XMMATRIX,
-        ID3D11ShaderResourceView*, XMFLOAT3, XMFLOAT4);
+        ID3D11ShaderResourceView*, XMFLOAT3, XMFLOAT4, XMFLOAT4);
     void RenderShader(ID3D11DeviceContext*, int);
 
 private:
