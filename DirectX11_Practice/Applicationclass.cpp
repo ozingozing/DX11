@@ -97,9 +97,15 @@ bool ApplicationClass::Initialize(int screenWidth, int screenHeight, HWND hwnd)
 	// Create and initialize the light object.
 	m_Light = new LightClass;
 
+	// 라이트 클래스 객체에서 이제 반사광 색상과 반사광 강도를 설정합니다.
+	// 이 튜토리얼에서는 반사광 색상을 흰색으로, 반사광 강도를 32로 설정합니다.
+	// 반사광 강도 값이 낮을수록 반사 효과가 커진다는 점을 기억하세요.
+	// 또한, 반사광 방향을 각도로 설정하면 반사 효과를 쉽게 확인할 수 있습니다.
 	m_Light->SetAmbientColor(0.15f, 0.15f, 0.15f, 1.0f);
 	m_Light->SetDiffuseColor(1.0f, 1.0f, 1.0f, 1.0f);
-	m_Light->SetDirection(1.0f, 0.0f, 0.0f);
+	m_Light->SetDirection(1.0f, 0.0f, 1.0f);
+	m_Light->SetSpecularColor(1.0f, 1.0f, 1.0f, 1.0f);
+	m_Light->SetSpecularPower(32.0f);
 
 	return true;
 }
@@ -198,7 +204,6 @@ bool ApplicationClass::Render(float rotation)
 	XMMATRIX worldMatrix, viewMatrix, projectionMatrix, rotateMatrix, translateMatrix, scaleMatrix, srMatrix;
 	bool result;
 
-
 	// Clear the buffers to begin the scene.
 	m_Direct3D->BeginScene(0.0f, 0.0f, 0.0f, 1.0f);
 
@@ -209,69 +214,21 @@ bool ApplicationClass::Render(float rotation)
 	m_Direct3D->GetWorldMatrix(worldMatrix);
 	m_Camera->GetViewMatrix(viewMatrix);
 	m_Direct3D->GetProjectionMatrix(projectionMatrix);
-
-	// 1. Y축 기준 회전 행렬 생성 (rotation 변수 사용)
-	rotateMatrix = XMMatrixRotationY(rotation);
-
-	// 2. 이동 행렬 생성 (큐브를 왼쪽으로 2유닛 이동)
-	translateMatrix = XMMatrixTranslation(-2.0f, 0.0f, 0.0f);
-
-	// 3. 두 행렬을 곱하여 최종 월드 변환 행렬 생성 (회전 -> 이동 순서)
-	worldMatrix = XMMatrixMultiply(rotateMatrix, translateMatrix);
-
-	// 모델의 정점(Vertex) 및 인덱스(Index) 버퍼를 그래픽 파이프라인에 설정하여 그릴 준비를 합니다.
+	
+	// Rotate the world matrix by the rotation value so that the model will spin.
+	worldMatrix = XMMatrixRotationY(rotation);
+	// Put the model vertex and index buffers on the graphics pipeline to prepare them for drawing.
 	m_Model->Render(m_Direct3D->GetDeviceContext());
 
-	// 라이트 쉐이더를 사용하여 모델을 렌더링합니다.
-	// 월드, 뷰, 투영 행렬과 함께 텍스처, 조명 방향, 조명 색상 정보를 전달합니다.
+	// Render the model using the light shader.
 	result = m_LightShader->Render(m_Direct3D->GetDeviceContext(), m_Model->GetIndexCount(), worldMatrix, viewMatrix, projectionMatrix, m_Model->GetTexture(),
-		m_Light->GetDirection(), m_Light->GetAmbientColor(), m_Light->GetDiffuseColor());
+		m_Light->GetDirection(), m_Light->GetAmbientColor(), m_Light->GetDiffuseColor(),
+		m_Camera->GetPosition(), m_Light->GetSpecularColor(), m_Light->GetSpecularPower());
 	if (!result)
 	{
 		return false;
 	}
 
-	// 1. 크기 조절 행렬 생성 (모든 축에 대해 0.5배로 균등하게 축소)
-	scaleMatrix = XMMatrixScaling(0.5f, 0.5f, 0.5f);
-
-	// 2. 회전 행렬 생성 (첫 번째 큐브와 동일한 Y축 회전 적용)
-	rotateMatrix = XMMatrixRotationY(rotation);
-
-	// 3. 이동 행렬 생성 (반대 방향인 오른쪽으로 20유닛 이동)
-	translateMatrix = XMMatrixTranslation(20.f, 0.0f, 0.0f);
-
-	// 4. SRT 순서(Scale -> Rotate -> Translate)에 맞춰 행렬을 결합합니다.
-	// 먼저 크기 조절과 회전을 곱합니다.
-	srMatrix = XMMatrixMultiply(scaleMatrix, rotateMatrix);
-	// 그 결과에 이동 행렬을 곱하여 최종 월드 변환 행렬을 완성합니다.
-	worldMatrix = XMMatrixMultiply(srMatrix, translateMatrix);
-
-	// 모델 버퍼를 다시 준비합니다.
-	m_Model->Render(m_Direct3D->GetDeviceContext());
-
-	// 새로운 월드 행렬을 적용하여 두 번째 큐브를 화면에 렌더링합니다.
-	result = m_LightShader->Render(m_Direct3D->GetDeviceContext(), m_Model->GetIndexCount(), worldMatrix, viewMatrix, projectionMatrix, m_Model->GetTexture(),
-		m_Light->GetDirection(), m_Light->GetAmbientColor(), m_Light->GetDiffuseColor());
-	if (!result)
-	{
-		return false;
-	}
-
-	//// Rotate the world matrix by the rotation value so that the triangle will spin.
-	//worldMatrix = XMMatrixRotationY(rotation);
-
-	//// Put the model vertex and index buffers on the graphics pipeline to prepare them for drawing.
-	//m_Model->Render(m_Direct3D->GetDeviceContext());
-
-	//// Render the model using the light shader.
-	//result = m_LightShader->Render(m_Direct3D->GetDeviceContext(), m_Model->GetIndexCount(), worldMatrix, viewMatrix, projectionMatrix, m_Model->GetTexture(),
-	//	m_Light->GetDirection(), m_Light->GetDiffuseColor());
-	//if (!result)
-	//{
-	//	return false;
-	//}
-
-	// Present the rendered scene to the screen.
 	m_Direct3D->EndScene();
 
 	return true;

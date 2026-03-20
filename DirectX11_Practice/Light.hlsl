@@ -13,10 +13,19 @@ cbuffer MatrixBuffer : register(b0)
 // 조명 버퍼: 광원의 색상과 방향 정보 (LightClass에서 설정됨)
 cbuffer LightBuffer : register(b1)
 {
+    float4 ambientColor;
     float4 diffuseColor; // 확산광 색상
     float3 lightDirection; // 광원이 비추는 방향
-    float padding; // 16바이트 정렬을 위한 패딩
-    float4 ambientColor;
+    // 광 버퍼가 업데이트되어 반사광 계산에 필요한
+    // specularColor 및 specularPower 값을 저장하게 되었습니다.
+    float specularPower;
+    float4 specularColor;
+};
+
+cbuffer CameraBuffer : register(b2)
+{
+    float3 cameraPosition;
+    float padding;
 };
 
 //////////////
@@ -32,11 +41,14 @@ struct VertexInputType
 };
 
 // 픽셀 셰이더 입력 구조체 (정점 셰이더의 출력)
+// PixelInputType 구조체는 시점 방향을 정점 셰이더에서 계산한 다음
+// 반사광 계산을 위해 픽셀 셰이더로 전달해야 하므로 수정됩니다.
 struct PixelInputType
 {
     float4 position : SV_POSITION; // 화면상의 투영된 위치
     float2 tex : TEXCOORD0; // 보간된 텍스처 좌표
     float3 normal : NORMAL; // 월드 공간에서의 법선 벡터
+    float3 viewDirection : TEXCOORD1;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -45,7 +57,8 @@ struct PixelInputType
 PixelInputType LightVertexShader(VertexInputType input)
 {
     PixelInputType output;
-
+    float4 worldPosition;
+    
     // 행렬 연산을 위해 w 성분을 1.0으로 설정
     input.position.w = 1.0f;
 
@@ -63,7 +76,18 @@ PixelInputType LightVertexShader(VertexInputType input)
 
     // 변환된 법선 벡터를 정규화(단위 벡터화)
     output.normal = normalize(output.normal);
-
+    
+    // 시선 방향(Viewing Direction)은 여기 정점 셰이더에서 계산됩니다.
+    // 먼저 정점의 월드 공간 좌표(World Position)를 계산한 뒤, 
+    // 이를 카메라 위치(Camera Position)에서 빼서 우리가 장면을 어디서 바라보고 있는지 결정합니다.
+    // 최종 값은 정규화(Normalize)되어 픽셀 셰이더로 전달됩니다.
+    
+    // 정점의 월드 좌표계를 계산합니다.
+    worldPosition = mul(input.position, worldMatrix);
+    // 카메라의 위치와 월드 좌표계상의 정점 위치를 기준으로 시야 방향을 결정합니다.
+    // 시야 방향 벡터를 정규화합니다.
+    output.viewDirection = normalize(cameraPosition - worldPosition.xyz);
+    
     return output;
 }
 
@@ -80,26 +104,37 @@ float4 LightPixelShader(PixelInputType input) : SV_TARGET
     float3 lightDir;
     float lightIntensity;
     float4 color;
-
-    // 1. 샘플러를 사용하여 해당 좌표의 텍스처 색상을 추출
-    textureColor = shaderTexture.Sample(SampleType, input.tex);
-
-    // 2. 조명 계산을 위해 광원 방향을 반전 (광원에서 물체가 아닌, 물체에서 광원을 향하도록)
-    lightDir = -lightDirection;
-
-    // 3. 법선 벡터와 광원 방향 벡터의 내적(Dot Product)을 통해 빛의 세기 계산
-    // 두 벡터가 일치할수록 1(최대 밝기), 직교하거나 반대면 0 이하가 됨
-    // saturate는 값을 0.0 ~ 1.0 사이로 제한함
-    lightIntensity = saturate(dot(input.normal, lightDir));
-
-    // 4. 광원의 확산색상과 계산된 세기를 곱하여 최종 조명 색상 결정
-    color = saturate(diffuseColor * lightIntensity);
-
-    float4 diffuse = diffuseColor * lightIntensity;
-    float4 ambient = ambientColor;
+    float3 reflection;
+    float4 specular;
     
-    // 5. 텍스처 색상과 조명 색상을 결합(곱셈)하여 최종 픽셀 색상 출력
-    color = (ambient + diffuse) * textureColor;
+    // 이 텍스처 좌표 위치에서 샘플러를 사용하여 텍스처의 픽셀 색상을 샘플링합니다.
+    textureColor = shaderTexture.Sample(SampleType, input.tex);
+    // 모든 픽셀의 기본 출력 색상을 주변광 값으로 설정합니다.
+    color = ambientColor;
+    // 반사광 색상을 초기화합니다.
+    specular = float4(0.0f, 0.0f, 0.0f, 0.0f);
+    // 계산을 위해 빛의 방향을 반전시킵니다.
+    lightDir = -lightDirection;
+    // 이 픽셀에 도달하는 빛의 양을 계산합니다.
+    lightIntensity = saturate(dot(input.normal, lightDir));
+    
+    if (lightIntensity > 0.0f)
+    {
+        // 확산광 색상과 광량에 따라 최종 확산광 색상을 결정합니다.
+        color += (diffuseColor * lightIntensity);
+        // 주변광과 확산광의 색상을 포함시킵니다.
+        color = saturate(color);
+        // 광도, 법선 벡터 및 광 방향을 기반으로 반사 벡터를 계산합니다.
+        reflection = normalize(2.0f * lightIntensity * input.normal - lightDir);
+        // 반사 벡터, 시야 방향 및 반사광 강도를 기반으로 반사광의 양을 결정합니다.
+        specular = pow(saturate(dot(reflection, input.viewDirection)), specularPower);
+    }
+    
+    // 텍스처 픽셀과 최종 확산 색상을 곱하여 최종 픽셀 색상 결과를 얻습니다.
+    color = color * textureColor;
 
+    // 반사광 성분을 출력 색상의 마지막에 추가합니다.
+    color = saturate(color + specular);
+    
     return color;
 }
