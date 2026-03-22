@@ -9,10 +9,8 @@ ApplicationClass::ApplicationClass()
 	m_Direct3D = 0;
 	m_Camera = 0;
 	m_Model = 0;
-	m_ColorShader = 0;
-	m_TextureShader = 0;
 	m_LightShader = 0;
-	m_Light = 0;
+	m_Lights = 0;
 }
 
 
@@ -50,14 +48,14 @@ bool ApplicationClass::Initialize(int screenWidth, int screenHeight, HWND hwnd)
 	m_Camera = new CameraClass;
 
 	// Set the initial position of the camera.
-	m_Camera->SetPosition(0.0f, 50.f, -300.0f);
+	m_Camera->SetPosition(0.0f, 2.0f, -12.0f);
 
 	// Create and initialize the model object.
 	m_Model = new ModelClass;
 
 	// Set the file anme of the model.
 	//strcpy_s(modelFilename, "../Resource/Cube.txt");
-	strcpy_s(modelFilename, "../Resource/Man.fbx");
+	strcpy_s(modelFilename, "../Resource/plane.txt");
 
 	// Set the name of the texture file that we will be loading.
 	//C:\Users\sky2503\Desktop\stone01.tga
@@ -67,16 +65,6 @@ bool ApplicationClass::Initialize(int screenWidth, int screenHeight, HWND hwnd)
 	if (!result)
 	{
 		MessageBox(hwnd, L"Could not initialize the model object.", L"Error", MB_OK);
-		return false;
-	}
-
-	// Create and initialize the texture shader object.
-	m_TextureShader = new TextureShaderClass;
-
-	result = m_TextureShader->Initialize(m_Direct3D->GetDevice(), hwnd);
-	if (!result)
-	{
-		MessageBox(hwnd, L"Could not initialize the texture shader object.", L"Error", MB_OK);
 		return false;
 	}
 
@@ -91,21 +79,24 @@ bool ApplicationClass::Initialize(int screenWidth, int screenHeight, HWND hwnd)
 		return false;
 	}
 
-	// 새로운 광원 객체가 여기에 생성됩니다.
-	// 광원의 색상은 흰색으로 설정되고
-	// 광원의 방향은 양의 Z축을 따라 아래쪽으로 설정됩니다.
-	// Create and initialize the light object.
-	m_Light = new LightClass;
+	// Set the number of lights we will use.
+	m_numLights = 4;
 
-	// 라이트 클래스 객체에서 이제 반사광 색상과 반사광 강도를 설정합니다.
-	// 이 튜토리얼에서는 반사광 색상을 흰색으로, 반사광 강도를 32로 설정합니다.
-	// 반사광 강도 값이 낮을수록 반사 효과가 커진다는 점을 기억하세요.
-	// 또한, 반사광 방향을 각도로 설정하면 반사 효과를 쉽게 확인할 수 있습니다.
-	m_Light->SetAmbientColor(0.15f, 0.15f, 0.15f, 1.0f);
-	m_Light->SetDiffuseColor(1.0f, 1.0f, 1.0f, 1.0f);
-	m_Light->SetDirection(1.0f, 0.0f, 1.0f);
-	m_Light->SetSpecularColor(1.0f, 1.0f, 1.0f, 1.0f);
-	m_Light->SetSpecularPower(32.0f);
+	// Create and initialize the light objects array.
+	m_Lights = new LightClass[m_numLights];
+
+	// Manually set the color and position of each light.
+	m_Lights[0].SetDiffuseColor(1.0f, 0.0f, 0.0f, 1.0f);  // Red
+	m_Lights[0].SetPosition(-3.0f, 1.0f, 3.0f);
+
+	m_Lights[1].SetDiffuseColor(0.0f, 1.0f, 0.0f, 1.0f);  // Green
+	m_Lights[1].SetPosition(3.0f, 1.0f, 3.0f);
+
+	m_Lights[2].SetDiffuseColor(0.0f, 0.0f, 1.0f, 1.0f);  // Blue
+	m_Lights[2].SetPosition(-3.0f, 1.0f, -3.0f);
+
+	m_Lights[3].SetDiffuseColor(1.0f, 1.0f, 1.0f, 1.0f);  // White
+	m_Lights[3].SetPosition(3.0f, 1.0f, -3.0f);
 
 	return true;
 }
@@ -113,11 +104,11 @@ bool ApplicationClass::Initialize(int screenWidth, int screenHeight, HWND hwnd)
 
 void ApplicationClass::Shutdown()
 {
-	// Release the light object.
-	if (m_Light)
+	// Release the light objects.
+	if (m_Lights)
 	{
-		delete m_Light;
-		m_Light = 0;
+		delete[] m_Lights;
+		m_Lights = 0;
 	}
 
 	// Release the light shader object.
@@ -126,21 +117,6 @@ void ApplicationClass::Shutdown()
 		m_LightShader->Shutdown();
 		delete m_LightShader;
 		m_LightShader = 0;
-	}
-	// Release the texture shader object.
-	if (m_TextureShader)
-	{
-		m_TextureShader->Shutdown();
-		delete m_TextureShader;
-		m_TextureShader = 0;
-	}
-
-	// Release the color shader object.
-	if (m_ColorShader)
-	{
-		m_ColorShader->Shutdown();
-		delete m_ColorShader;
-		m_ColorShader = 0;
 	}
 
 	// Release the model object.
@@ -201,7 +177,9 @@ bool ApplicationClass::Frame()
 // 6. 출력: 초록색 삼각형이 백 버퍼(Back Buffer)에 그려지면, EndScene을 호출하여 완성된 장면을 실제 화면에 표시합니다.
 bool ApplicationClass::Render(float rotation)
 {
-	XMMATRIX worldMatrix, viewMatrix, projectionMatrix, rotateMatrix, translateMatrix, scaleMatrix, srMatrix;
+	XMMATRIX worldMatrix, viewMatrix, projectionMatrix;
+	XMFLOAT4 diffuseColor[4], lightPosition[4];
+	int i;
 	bool result;
 
 	// Clear the buffers to begin the scene.
@@ -215,15 +193,25 @@ bool ApplicationClass::Render(float rotation)
 	m_Camera->GetViewMatrix(viewMatrix);
 	m_Direct3D->GetProjectionMatrix(projectionMatrix);
 	
-	// Rotate the world matrix by the rotation value so that the model will spin.
-	worldMatrix = XMMatrixRotationY(rotation);
+	// 네 개의 포인트 라이트에서 두 개의 배열(색상 및 위치)을 설정했습니다.
+	// 이렇게 하면 여덟 개의 서로 다른 조명 구성 요소를 보내는 대신
+	// 두 개의 배열 변수만 보내면 되므로 훨씬 간편해집니다.
+	// 조명의 속성을 가져옵니다.
+	for (i = 0; i < m_numLights; i++)
+	{
+		// 네 가지 광원 색상으로부터 확산 색상 배열을 생성합니다.
+		diffuseColor[i] = m_Lights[i].GetDiffuseColor();
+
+		// 네 개의 조명 위치를 이용하여 조명 위치 배열을 생성합니다.
+		lightPosition[i] = m_Lights[i].GetPosition();
+	}
+
 	// Put the model vertex and index buffers on the graphics pipeline to prepare them for drawing.
 	m_Model->Render(m_Direct3D->GetDeviceContext());
 
 	// Render the model using the light shader.
 	result = m_LightShader->Render(m_Direct3D->GetDeviceContext(), m_Model->GetIndexCount(), worldMatrix, viewMatrix, projectionMatrix, m_Model->GetTexture(),
-		m_Light->GetDirection(), m_Light->GetAmbientColor(), m_Light->GetDiffuseColor(),
-		m_Camera->GetPosition(), m_Light->GetSpecularColor(), m_Light->GetSpecularPower());
+		diffuseColor, lightPosition);
 	if (!result)
 	{
 		return false;

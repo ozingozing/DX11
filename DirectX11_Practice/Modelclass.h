@@ -70,6 +70,7 @@ public:
 	ID3D11ShaderResourceView* GetTexture();
 private:
 	bool InitializeBuffers(ID3D11Device*);
+	bool InitializeBuffers_2(ID3D11Device* device);
 	void ShutdownBuffers();
 	void RenderBuffers(ID3D11DeviceContext*);
 
@@ -93,6 +94,7 @@ private:
 
 	// 텍스트 파일에서 모델 데이터를 로드하고 해제하기 위한 새로운 함수들입니다.
 	bool LoadModel(char*);
+	bool LoadModel_2(char* filename);
 	void ReleaseModel();
 private:
 	// ModelClass의 private 변수들은 정점 및 인덱스 버퍼이며, 각 버퍼의 크기를 추적하기 위한 두 개의 정수 변수입니다.

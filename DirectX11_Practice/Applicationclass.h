@@ -45,11 +45,10 @@ private:
 	D3DClass* m_Direct3D;
 	CameraClass* m_Camera;
 	ModelClass* m_Model;
-	ColorShaderClass* m_ColorShader;
-	TextureShaderClass* m_TextureShader;
-
 	LightShaderClass* m_LightShader;
-	LightClass* m_Light;
+
+	LightClass* m_Lights;
+	int m_numLights;
 };
 
 #endif

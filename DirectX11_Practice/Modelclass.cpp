@@ -46,27 +46,42 @@ bool ModelClass::Initialize(ID3D11Device* device, ID3D11DeviceContext* deviceCon
 {
 	bool result;
 
+	std::string fileName = modelFilename;
+	std::string ext;
 
-	// Load in the model data.
-	result = LoadModel(modelFilename);
-	if (!result)
+	size_t dotPos = fileName.find_last_of('.');
+	if (dotPos != std::string::npos)
+	{
+		ext = fileName.substr(dotPos);
+		for (char& c : ext)
+			c = static_cast<char>(tolower(c));
+	}
+
+	if (ext == ".txt")
+	{
+		result = LoadModel_2(modelFilename);
+		if (!result)
+			return false;
+
+		result = InitializeBuffers_2(device);
+		if (!result)
+			return false;
+	}
+	else if (ext == ".fbx")
+	{
+		result = LoadModel(modelFilename);
+		if (!result)
+			return false;
+
+		result = InitializeBuffers(device);
+		if (!result)
+			return false;
+	}
+	else
 	{
 		return false;
 	}
 
-	// Initialize the vertex and index buffers.
-	result = InitializeBuffers(device);
-	if (!result)
-	{
-		return false;
-	}
-
-	// Load the texture for this model.
-	/*result = LoadTexture(device, deviceContext, textureFilename);
-	if (!result)
-	{
-		return false;
-	}*/
 
 	// 1. FBX 내장 텍스처가 있으면 그걸 우선 사용
 	if (m_hasEmbeddedTexture)
@@ -181,12 +196,90 @@ bool ModelClass::InitializeBuffers(ID3D11Device* device)
 		vertices[i].position = XMFLOAT3(m_model[i].x, m_model[i].y, m_model[i].z);
 		vertices[i].texture = XMFLOAT2(m_model[i].tu, m_model[i].tv);
 		vertices[i].normal = XMFLOAT3(m_model[i].nx, m_model[i].ny, m_model[i].nz);
-
-		//indices[i] = i;
 	}
 	for (int i = 0; i < m_indexCount; i++)
 	{
 		indices[i] = m_modelIndices[i];
+	}
+
+	// 정점 및 인덱스 배열이 채워졌으므로 이제 이를 사용하여 정점 버퍼와 인덱스 버퍼를 생성할 수 있습니다.
+	// 두 버퍼를 생성하는 방식은 동일합니다. 먼저 버퍼에 대한 설명(description)을 채웁니다.
+	// 설명에서 ByteWidth(버퍼의 크기)와 BindFlags(버퍼의 타입)가 올바르게 채워졌는지 확인해야 합니다.
+	// 설명이 채워진 후에는 이전에 생성한 정점 또는 인덱스 배열을 가리킬 서브리소스 포인터도 채워야 합니다.
+	// 설명과 서브리소스 포인터를 사용하여 D3D 장치를 이용해 CreateBuffer를 호출하면 새 버퍼에 대한 포인터가 반환됩니다.
+	// 정적 정점 버퍼의 설명을 설정합니다.
+	vertexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
+	vertexBufferDesc.ByteWidth = sizeof(VertexType) * m_vertexCount;
+	vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	vertexBufferDesc.CPUAccessFlags = 0;
+	vertexBufferDesc.MiscFlags = 0;
+	vertexBufferDesc.StructureByteStride = 0;
+
+	// 서브리소스 구조체에 정점 데이터에 대한 포인터를 제공합니다.
+	vertexData.pSysMem = vertices;
+	vertexData.SysMemPitch = 0;
+	vertexData.SysMemSlicePitch = 0;
+
+	// 이제 정점 버퍼를 생성합니다.
+	result = device->CreateBuffer(&vertexBufferDesc, &vertexData, &m_vertexBuffer);
+	if (FAILED(result))
+	{
+		return false;
+	}
+
+	// 정적 인덱스 버퍼의 설명을 설정합니다.
+	indexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
+	indexBufferDesc.ByteWidth = sizeof(unsigned long) * m_indexCount;
+	indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+	indexBufferDesc.CPUAccessFlags = 0;
+	indexBufferDesc.MiscFlags = 0;
+	indexBufferDesc.StructureByteStride = 0;
+
+	// 서브리소스 구조체에 인덱스 데이터에 대한 포인터를 제공합니다.
+	indexData.pSysMem = indices;
+	indexData.SysMemPitch = 0;
+	indexData.SysMemSlicePitch = 0;
+
+	// 인덱스 버퍼를 생성합니다.
+	result = device->CreateBuffer(&indexBufferDesc, &indexData, &m_indexBuffer);
+	if (FAILED(result))
+	{
+		return false;
+	}
+
+	// 정점 버퍼와 인덱스 버퍼가 생성되고 로드되었으므로, 더 이상 필요하지 않은 정점 및 인덱스 배열을 해제합니다.
+	// 데이터가 버퍼에 복사되었기 때문입니다.
+	// 이제 정점 및 인덱스 배열을 해제합니다.
+	delete[] vertices;
+	vertices = 0;
+
+	delete[] indices;
+	indices = 0;
+
+	return true;
+}
+
+bool ModelClass::InitializeBuffers_2(ID3D11Device* device)
+{
+	VertexType* vertices;
+	unsigned long* indices;
+	D3D11_BUFFER_DESC vertexBufferDesc, indexBufferDesc;
+	D3D11_SUBRESOURCE_DATA vertexData, indexData;
+	HRESULT result;
+	int i;
+
+	// Create the vertex array
+	vertices = new VertexType[m_vertexCount];
+	// Create the index array
+	indices = new unsigned long[m_indexCount];
+	// Load rhe vertex and index array with data.
+	for (i = 0; i < m_vertexCount; i++)
+	{
+		vertices[i].position = XMFLOAT3(m_model[i].x, m_model[i].y, m_model[i].z);
+		vertices[i].texture = XMFLOAT2(m_model[i].tu, m_model[i].tv);
+		vertices[i].normal = XMFLOAT3(m_model[i].nx, m_model[i].ny, m_model[i].nz);
+
+		indices[i] = i;
 	}
 
 	// 정점 및 인덱스 배열이 채워졌으므로 이제 이를 사용하여 정점 버퍼와 인덱스 버퍼를 생성할 수 있습니다.
@@ -265,112 +358,6 @@ void ModelClass::ShutdownBuffers()
 
 	return;
 }
-
-//bool ModelClass::InitializeBuffers(ID3D11Device* device)
-//{
-//	VertexType* vertices;
-//	unsigned long* indices;
-//	D3D11_BUFFER_DESC vertexBufferDesc, indexBufferDesc;
-//	D3D11_SUBRESOURCE_DATA vertexData, indexData;
-//	HRESULT result;
-//
-//	// 원의 중심점과 주변 정점들을 포함하여 정점 수를 설정합니다.
-//	m_vertexCount = CIRCLE_SEGMENTS + 1; // 중심점 + 원 둘레의 정점 수
-//
-//	// 삼각형 개수 * 3개의 인덱스 수를 설정합니다.
-//	m_indexCount = CIRCLE_SEGMENTS * 3;
-//
-//	// 정점 배열을 생성합니다.
-//	vertices = new VertexType[m_vertexCount];
-//	if (!vertices)
-//	{
-//		return false;
-//	}
-//
-//	// 인덱스 배열을 생성합니다.
-//	indices = new unsigned long[m_indexCount];
-//	if (!indices)
-//	{
-//		return false;
-//	}
-//
-//	// === 1. 정점 데이터 계산 ===
-//	// 원의 중심 정점을 설정합니다.
-//	vertices[0].position = XMFLOAT3(0.0f, 0.0f, 0.0f); // 원점
-//	vertices[0].color = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f); // 흰색
-//
-//	// 원의 둘레를 따라 정점들을 계산합니다.
-//	float radius = 1.0f;
-//	float angleIncrement = XM_2PI / (float)CIRCLE_SEGMENTS; // 2PI (360도)를 세그먼트 수로 나눔
-//
-//	for (int i = 0; i < CIRCLE_SEGMENTS; i++)
-//	{
-//		float currentAngle = i * angleIncrement;
-//		float x = radius * cos(currentAngle);
-//		float y = radius * sin(currentAngle);
-//
-//		vertices[i + 1].position = XMFLOAT3(x, -y, 0.0f);
-//		vertices[i + 1].color = XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f); // 빨간색 원
-//	}
-//
-//	// === 2. 인덱스 데이터 계산 ===
-//	// 부채꼴 모양의 삼각형을 구성하기 위한 인덱스를 설정합니다.
-//	for (int i = 0; i < CIRCLE_SEGMENTS; i++)
-//	{
-//		indices[i * 3 + 0] = 0;             // 모든 삼각형의 첫 번째 인덱스는 중심점
-//		indices[i * 3 + 1] = i + 1;         // 원 둘레의 현재 정점
-//		indices[i * 3 + 2] = (i + 1) % CIRCLE_SEGMENTS + 1; // 원 둘레의 다음 정점 (마지막 정점은 첫 번째 정점과 연결)
-//	}
-//
-//	// === 3. 버퍼 생성 (이하 코드는 사각형과 동일) ===
-//	// 정적 정점 버퍼의 설명을 설정합니다.
-//	vertexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-//	vertexBufferDesc.ByteWidth = sizeof(VertexType) * m_vertexCount;
-//	vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-//	vertexBufferDesc.CPUAccessFlags = 0;
-//	vertexBufferDesc.MiscFlags = 0;
-//	vertexBufferDesc.StructureByteStride = 0;
-//
-//	// 서브리소스 구조체에 정점 데이터에 대한 포인터를 제공합니다.
-//	vertexData.pSysMem = vertices;
-//	vertexData.SysMemPitch = 0;
-//	vertexData.SysMemSlicePitch = 0;
-//
-//	// 정점 버퍼를 생성합니다.
-//	result = device->CreateBuffer(&vertexBufferDesc, &vertexData, &m_vertexBuffer);
-//	if (FAILED(result))
-//	{
-//		return false;
-//	}
-//
-//	// 정적 인덱스 버퍼의 설명을 설정합니다.
-//	indexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-//	indexBufferDesc.ByteWidth = sizeof(unsigned long) * m_indexCount;
-//	indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-//	indexBufferDesc.CPUAccessFlags = 0;
-//	indexBufferDesc.MiscFlags = 0;
-//	indexBufferDesc.StructureByteStride = 0;
-//
-//	// 서브리소스 구조체에 인덱스 데이터에 대한 포인터를 제공합니다.
-//	indexData.pSysMem = indices;
-//	indexData.SysMemPitch = 0;
-//	indexData.SysMemSlicePitch = 0;
-//
-//	// 인덱스 버퍼를 생성합니다.
-//	result = device->CreateBuffer(&indexBufferDesc, &indexData, &m_indexBuffer);
-//	if (FAILED(result))
-//	{
-//		return false;
-//	}
-//
-//	// 배열 해제
-//	delete[] vertices;
-//	vertices = 0;
-//	delete[] indices;
-//	indices = 0;
-//
-//	return true;
-//}
 
 // RenderBuffers는 Render 함수에서 호출됩니다.
 // 이 함수의 목적은 정점 및 인덱스 버퍼를 GPU의 입력 어셈블러에 활성화하는 것입니다.
@@ -614,57 +601,60 @@ bool ModelClass::LoadModel(char* filename)
 	}
 
 	return true;
+}
 
-	//ifstream fin;
-	//char input;
-	//int i;
+bool ModelClass::LoadModel_2(char* filename)
+{
+	ifstream fin;
+	char input;
+	int i;
 
-	//// Open the model file.
-	//fin.open(filename);
+	// Open the model file.
+	fin.open(filename);
 
-	//// if it could not open the file then exit.
-	//if (fin.fail())
-	//{
-	//	return false;
-	//}
+	// if it could not open the file then exit.
+	if (fin.fail())
+	{
+		return false;
+	}
 
-	//// Read up to the value of vertex count.
-	//fin.get(input);
-	//while (input != ':')
-	//{
-	//	fin.get(input);
-	//}
+	// Read up to the value of vertex count.
+	fin.get(input);
+	while (input != ':')
+	{
+		fin.get(input);
+	}
 
-	//// Read in the vertex count.
-	//fin >> m_vertexCount;
+	// Read in the vertex count.
+	fin >> m_vertexCount;
 
-	//// Set the number of indices to be the same as the vertex count.
-	//m_indexCount = m_vertexCount;
+	// Set the number of indices to be the same as the vertex count.
+	m_indexCount = m_vertexCount;
 
-	//// Create the model using the vertex count that was read in.
-	//m_model = new ModelType[m_vertexCount];
+	// Create the model using the vertex count that was read in.
+	m_model = new ModelType[m_vertexCount];
 
-	//// Read up to the beginning of the data.
-	//fin.get(input);
-	//while (input != ':')
-	//{
-	//	fin.get(input);
-	//}
-	//fin.get(input);
-	//fin.get(input);
+	// Read up to the beginning of the data.
+	fin.get(input);
+	while (input != ':')
+	{
+		fin.get(input);
+	}
+	fin.get(input);
+	fin.get(input);
 
-	//// Read in the vertex data.
-	//for (i = 0; i < m_vertexCount; i++)
-	//{
-	//	fin >> m_model[i].x >> m_model[i].y >> m_model[i].z;
-	//	fin >> m_model[i].tu >> m_model[i].tv;
-	//	fin >> m_model[i].nx >> m_model[i].ny >> m_model[i].nz;
-	//}
+	// Read in the vertex data.
+	for (i = 0; i < m_vertexCount; i++)
+	{
+		fin >> m_model[i].x >> m_model[i].y >> m_model[i].z;
+		fin >> m_model[i].tu >> m_model[i].tv;
+		fin >> m_model[i].nx >> m_model[i].ny >> m_model[i].nz;
+	}
 
-	//// Close the model file.
-	//fin.close();
+	// Close the model file.
+	fin.close();
 
-	//return true;
+	return true;
 }
 
 // The ReleaseModel function handles
