@@ -13,6 +13,9 @@ D3DClass::D3DClass()
 	m_depthStencilState = 0;
 	m_depthStencilView = 0;
 	m_rasterState = 0;
+
+	// 클래스 생성자에서 새 깊이 스텐실 상태를 null로 초기화합니다.
+	m_depthDisabledStencilState = 0;
 }
 
 
@@ -45,6 +48,8 @@ bool D3DClass::Initialize(int screenWidth, int screenHeight, bool vsync, HWND hw
 	D3D11_RASTERIZER_DESC rasterDesc;
 	float fieldOfView, screenAspect;
 
+	// 새로운 깊이 스텐실 설정을 위한 새로운 깊이 스텐실 설명 변수가 있습니다.
+	D3D11_DEPTH_STENCIL_DESC depthDisabledStencilDesc;
 
 	// vsync(Vertical Synchronization 수직동기화) 설정을 저장합니다.
 	m_vsync_enabled = vsync;
@@ -487,6 +492,40 @@ bool D3DClass::Initialize(int screenWidth, int screenHeight, bool vsync, HWND hw
 	// 2D 렌더링을 위한 직교 투영 행렬을 생성합니다.
 	m_orthoMatrix = XMMatrixOrthographicLH((float)screenWidth, (float)screenHeight, screenNear, screenDepth);
 
+
+	// 여기서는 깊이 스텐실에 대한 설명을 설정합니다.
+	// 이 새로운 깊이 스텐실과 이전 스텐실의 유일한 차이점은
+	// 2D 도면의 경우 DepthEnable이 false로 설정되어 있다는 점입니다.
+	// 
+	// 매개변수를 설정하기 전에 두 번째 깊이 스텐실 상태를 지우십시오.
+	ZeroMemory(&depthDisabledStencilDesc, sizeof(depthDisabledStencilDesc));
+
+	// 이제 2D 렌더링 시 Z 버퍼를 끄는 두 번째 깊이 스텐실 상태를 생성합니다.
+	// 유일한 차이점은 DepthEnable이 false로 설정된다는 점이며,
+	// 다른 모든 매개변수는 다른 깊이 스텐실 상태와 동일합니다.
+	depthDisabledStencilDesc.DepthEnable = false;
+	depthDisabledStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+	depthDisabledStencilDesc.DepthFunc = D3D11_COMPARISON_LESS;
+	depthDisabledStencilDesc.StencilEnable = true;
+	depthDisabledStencilDesc.StencilReadMask = 0xFF;
+	depthDisabledStencilDesc.StencilWriteMask = 0xFF;
+	depthDisabledStencilDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+	depthDisabledStencilDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
+	depthDisabledStencilDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+	depthDisabledStencilDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+	depthDisabledStencilDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+	depthDisabledStencilDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
+	depthDisabledStencilDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+	depthDisabledStencilDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+
+	// 이제 새로운 깊이 스텐실을 만드세요.
+	// device를 사용하여 상태를 생성합니다.
+	result = m_device->CreateDepthStencilState(&depthDisabledStencilDesc, &m_depthDisabledStencilState);
+	if (FAILED(result))
+	{
+		return false;
+	}
+
 	return true;
 }
 
@@ -496,6 +535,13 @@ void D3DClass::Shutdown()
 	if (m_swapChain)
 	{
 		m_swapChain->SetFullscreenState(false, NULL);
+	}
+
+	// Here we release the new depth stencil during the Shutdown function.
+	if (m_depthDisabledStencilState)
+	{
+		m_depthDisabledStencilState->Release();
+		m_depthDisabledStencilState = 0;
 	}
 
 	if (m_rasterState)
@@ -637,5 +683,22 @@ void D3DClass::ResetViewport()
 	// Set the viewport.
 	m_deviceContext->RSSetViewports(1, &m_viewport);
 
+	return;
+}
+
+// 다음은 Z 버퍼를 활성화 및 비활성화하는 새로운 기능입니다.
+// Z 버퍼링을 켜려면 원래 깊이 스텐실을 설정합니다.
+// Z 버퍼링을 끄려면 depthEnable이 false로 설정된 새 깊이 스텐실을 설정합니다.
+// 일반적으로 이러한 기능을 사용하는 가장 좋은 방법은 먼저 모든 3D 렌더링을 완료한 다음
+// Z 버퍼를 끄고 2D 렌더링을 수행하고 마지막으로 Z 버퍼를 다시 켜는 것입니다.
+void D3DClass::TurnZBufferOn()
+{
+	m_deviceContext->OMSetDepthStencilState(m_depthStencilState, 1);
+	return;
+}
+
+void D3DClass::TurnZBufferOff()
+{
+	m_deviceContext->OMSetDepthStencilState(m_depthDisabledStencilState, 1);
 	return;
 }

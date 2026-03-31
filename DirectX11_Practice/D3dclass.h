@@ -47,6 +47,11 @@ public:
     void SetBackBufferRenderTarget();
     void ResetViewport();
 
+    // 이제 D3DClass에 2D 이미지 렌더링 시
+    // Z 버퍼를 켜고 끄는 두 가지 새로운 함수가 추가되었습니다.
+    void TurnZBufferOn();
+    void TurnZBufferOff();
+
 private:
     bool m_vsync_enabled;
     int m_videoCardMemory;
@@ -63,6 +68,9 @@ private:
     XMMATRIX m_worldMatrix;
     XMMATRIX m_orthoMatrix;
     D3D11_VIEWPORT m_viewport;
+
+    // 2D 도면을 위한 새로운 깊이 스텐실 상태도 추가되었습니다.
+	ID3D11DepthStencilState* m_depthDisabledStencilState;
 };
 
 #endif
