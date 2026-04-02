@@ -1,0 +1,38 @@
+#pragma once
+// TimerClass는 실행 프레임 간의 정확한 시간을 측정하는 고정밀 타이머입니다.
+// 주로 표준 시간 간격이 필요한 객체의 동기화에 사용됩니다.
+////////////////////////////////////////////////////////////////////////////////
+// Filename: timerclass.h
+////////////////////////////////////////////////////////////////////////////////
+#ifndef _TIMERCLASS_H_
+#define _TIMERCLASS_H_
+
+
+//////////////
+// INCLUDES //
+//////////////
+#include <windows.h>
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Class name: TimerClass
+////////////////////////////////////////////////////////////////////////////////
+class TimerClass
+{
+public:
+    TimerClass();
+    TimerClass(const TimerClass&);
+    ~TimerClass();
+
+    bool Initialize();
+    void Frame();
+
+    float GetTime();
+
+private:
+    float m_frequency;
+    INT64 m_startTime;
+    float m_frameTime;
+};
+
+#endif

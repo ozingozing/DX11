@@ -143,9 +143,11 @@
     <ClCompile Include="LightShaderClass.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Modelclass.cpp" />
+    <ClCompile Include="SpriteClass.cpp" />
     <ClCompile Include="Systemclass.cpp" />
     <ClCompile Include="TextureClass.cpp" />
     <ClCompile Include="TextureShaderClass.cpp" />
+    <ClCompile Include="TimerClass.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Applicationclass.h" />
@@ -157,9 +159,11 @@
     <ClInclude Include="LightClass.h" />
     <ClInclude Include="LightShaderClass.h" />
     <ClInclude Include="Modelclass.h" />
+    <ClInclude Include="SpriteClass.h" />
     <ClInclude Include="Systemclass.h" />
     <ClInclude Include="TextureClass.h" />
     <ClInclude Include="TextureShaderClass.h" />
+    <ClInclude Include="TimerClass.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Color.hlsl">

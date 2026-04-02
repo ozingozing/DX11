@@ -12,10 +12,9 @@ ApplicationClass::ApplicationClass()
 	m_LightShader = 0;
 	m_Lights = 0;
 	m_TextureShader = 0;
-	m_Bitmap = 0;
 
-	m_renderX = 0;
-	m_renderY = 0;
+	m_Sprite = 0;
+	m_Timer = 0;
 }
 
 
@@ -34,7 +33,7 @@ ApplicationClass::~ApplicationClass()
 // so this model loads in a 3D cube object for rendering.
 bool ApplicationClass::Initialize(int screenWidth, int screenHeight, HWND hwnd)
 {
-	char bitmapFilename[128];
+	char spriteFilename[128];
 	bool result;
 
 
@@ -65,13 +64,24 @@ bool ApplicationClass::Initialize(int screenWidth, int screenHeight, HWND hwnd)
 		return false;
 	}
 
-	// Set the file name of the bitmap file.
-	strcpy_s(bitmapFilename, "../Resource/texture01.png");
+	// Here we initialize the new sprite object using the sprite_data_01.txt file.
+	// Set the sprite info file we will be using.
+	strcpy_s(spriteFilename, "../Resource/sprite_data_01.txt");
 
-	// Create and initialize the bitmap object.
-	m_Bitmap = new BitmapClass;
+	// Create and initialize the sprite object.
+	m_Sprite = new SpriteClass;
 
-	result = m_Bitmap->Initialize(m_Direct3D->GetDevice(), m_Direct3D->GetDeviceContext(), screenWidth, screenHeight, bitmapFilename, 50, 50);
+	result = m_Sprite->Initialize(m_Direct3D->GetDevice(), m_Direct3D->GetDeviceContext(), screenWidth, screenHeight, spriteFilename, 50, 50);
+	if (!result)
+	{
+		return false;
+	}
+	//The new TimerClass object is initialized here.
+
+	// Create and initialize the timer object.
+	m_Timer = new TimerClass;
+
+	result = m_Timer->Initialize();
 	if (!result)
 	{
 		return false;
@@ -155,12 +165,19 @@ bool ApplicationClass::Initialize(int screenWidth, int screenHeight, HWND hwnd)
 
 void ApplicationClass::Shutdown()
 {
-	// Release the bitmap object.
-	if (m_Bitmap)
+	// Release the timer object.
+	if (m_Timer)
 	{
-		m_Bitmap->Shutdown();
-		delete m_Bitmap;
-		m_Bitmap = 0;
+		delete m_Timer;
+		m_Timer = 0;
+	}
+
+	// Release the sprite object.
+	if (m_Sprite)
+	{
+		m_Sprite->Shutdown();
+		delete m_Sprite;
+		m_Sprite = 0;
 	}
 
 	// Release the texture shader object.
@@ -215,18 +232,20 @@ void ApplicationClass::Shutdown()
 
 bool ApplicationClass::Frame()
 {
-	static float rotation = 0.0f;
+	float frameTime;
 	bool result;
+	
+	// Update the system stats.
+	m_Timer->Frame();
 
-	// Update the rotation variable each frame.
-	rotation += 0.0174532925f;
-	if (rotation > 360.0f)
-	{
-		rotation = 0.f;
-	}
+	// Get the current frame time.
+	frameTime = m_Timer->GetTime();
+
+	// Update the sprite object using the frame time.
+	m_Sprite->Update(frameTime);
 
 	// Render the graphics scene.
-	result = Render(rotation);
+	result = Render();
 	if (!result)
 	{
 		return false;
@@ -261,7 +280,7 @@ bool ApplicationClass::Frame()
 // 4. 모델 준비: ModelClass::Render 함수를 호출하여 초록색 삼각형의 기하학적 구조(정점 및 인덱스 데이터)를 그래픽 파이프라인에 배치합니다.
 // 5. 셰이더 렌더링: 정점들이 준비되면 컬러 셰이더를 호출합니다. 이때 모델 정보와 각 정점의 위치를 결정할 세 가지 행렬(World, View, Projection)을 전달하여 실제 그리기를 수행합니다.
 // 6. 출력: 초록색 삼각형이 백 버퍼(Back Buffer)에 그려지면, EndScene을 호출하여 완성된 장면을 실제 화면에 표시합니다.
-bool ApplicationClass::Render(float i)
+bool ApplicationClass::Render()
 {
 	XMMATRIX worldMatrix, viewMatrix, orthoMatrix;
 	bool result;
@@ -274,27 +293,19 @@ bool ApplicationClass::Render(float i)
 	m_Direct3D->GetWorldMatrix(worldMatrix);
 	m_Camera->GetViewMatrix(viewMatrix);
 	m_Direct3D->GetOrthoMatrix(orthoMatrix);
-
-	// 2D 렌더링을 시작하기 전에 Z-버퍼(깊이 버퍼)를 끕니다.
-	// 이렇게 하면 2D 이미지가 화면의 기존 내용 위에 덮어씌워집니다.
+	
+	// Turn off the Z buffer to begin all 2D rendering.
 	m_Direct3D->TurnZBufferOff();
 
-	// 변경된 위치를 비트맵에 적용
-	m_Bitmap->SetRenderLocation(m_renderX + i, m_renderY + i);
-	m_Bitmap->SetRenderSize(i, i);
-	// 비트맵의 정점 및 인덱스 버퍼를 그래픽 파이프라인에 배치하여 그릴 준비를 합니다.
-	result = m_Bitmap->Render(m_Direct3D->GetDeviceContext());
-
+	// Put the sprite vertex and index buffers on the graphics pipeline to prepare them for drawing.
+	result = m_Sprite->Render(m_Direct3D->GetDeviceContext());
 	if (!result)
 	{
 		return false;
 	}
 
-	// 정점/인덱스 버퍼가 준비되면 텍스처 셰이더를 사용하여 렌더링합니다.
-	// 2D 렌더링을 위해 projectionMatrix 대신 orthoMatrix를 전달하는 것에 주목하세요.
-	// 참고: 카메라가 움직이는 경우라면 2D용 기본(Default) 뷰 행렬을 따로 만들어 사용해야 하지만,
-	// 이 튜토리얼에서는 카메라가 고정되어 있으므로 일반 뷰 행렬을 그대로 사용해도 무방합니다.
-	result = m_TextureShader->Render(m_Direct3D->GetDeviceContext(), m_Bitmap->GetIndexCount(), worldMatrix, viewMatrix, orthoMatrix, m_Bitmap->GetTexture());
+	// Render the sprite with the texture shader.
+	result = m_TextureShader->Render(m_Direct3D->GetDeviceContext(), m_Sprite->GetIndexCount(), worldMatrix, viewMatrix, orthoMatrix, m_Sprite->GetTexture());
 	if (!result)
 	{
 		return false;
