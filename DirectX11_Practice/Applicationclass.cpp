@@ -15,6 +15,11 @@ ApplicationClass::ApplicationClass()
 
 	m_Sprite = 0;
 	m_Timer = 0;
+
+	m_FontShader = 0;
+	m_Font = 0;
+	m_TextString1 = 0;
+	m_TextString2 = 0;
 }
 
 
@@ -33,7 +38,7 @@ ApplicationClass::~ApplicationClass()
 // so this model loads in a 3D cube object for rendering.
 bool ApplicationClass::Initialize(int screenWidth, int screenHeight, HWND hwnd)
 {
-	char spriteFilename[128];
+	char testString1[32], testString2[32];
 	bool result;
 
 
@@ -54,34 +59,52 @@ bool ApplicationClass::Initialize(int screenWidth, int screenHeight, HWND hwnd)
 	m_Camera->SetPosition(0.0f, 0.0f, -10.0f);
 	m_Camera->Render();
 
-	// Create and initialize the texture shader object.
-	m_TextureShader = new TextureShaderClass;
+	// 텍스트 렌더링을 위한 새로운 FontShaderClass 객체를 초기화합니다.
 
-	result = m_TextureShader->Initialize(m_Direct3D->GetDevice(), hwnd);
+	// 폰트 셰이더 객체를 생성하고 초기화합니다.
+	m_FontShader = new FontShaderClass;
+
+	result = m_FontShader->Initialize(m_Direct3D->GetDevice(), hwnd);
 	if (!result)
 	{
-		MessageBox(hwnd, L"Could not initialize the texture shader object.", L"Error", MB_OK);
+		MessageBox(hwnd, L"폰트 셰이더 객체를 초기화할 수 없습니다.", L"에러", MB_OK);
 		return false;
 	}
 
-	// Here we initialize the new sprite object using the sprite_data_01.txt file.
-	// Set the sprite info file we will be using.
-	strcpy_s(spriteFilename, "../Resource/sprite_data_01.txt");
+	// TextClass가 사용할 문장을 구축할 FontClass를 초기화합니다.
 
-	// Create and initialize the sprite object.
-	m_Sprite = new SpriteClass;
+	// 폰트 객체를 생성하고 초기화합니다.
+	m_Font = new FontClass;
 
-	result = m_Sprite->Initialize(m_Direct3D->GetDevice(), m_Direct3D->GetDeviceContext(), screenWidth, screenHeight, spriteFilename, 50, 50);
+	result = m_Font->Initialize(m_Direct3D->GetDevice(), m_Direct3D->GetDeviceContext(), 0);
 	if (!result)
 	{
 		return false;
 	}
-	//The new TimerClass object is initialized here.
 
-	// Create and initialize the timer object.
-	m_Timer = new TimerClass;
+	// 화면에 출력할 두 개의 문장을 설정합니다.
 
-	result = m_Timer->Initialize();
+	// 표시할 문자열 내용을 복사합니다.
+	strcpy_s(testString1, "Hello");
+	strcpy_s(testString2, "Goodbye");
+
+	// 위에서 생성한 두 개의 문자열을 렌더링하기 위해 두 개의 TextClass 객체를 생성합니다.
+	// 첫 번째 문장은 초록색(0, 1, 0)으로 설정하여 좌표 (10, 10)에 렌더링하고,
+	// 두 번째 문장은 노란색(1, 1, 0)으로 설정하여 좌표 (10, 50)에 렌더링합니다.
+
+	// 첫 번째 텍스트 객체를 생성하고 초기화합니다.
+	m_TextString1 = new TextClass;
+
+	result = m_TextString1->Initialize(m_Direct3D->GetDevice(), m_Direct3D->GetDeviceContext(), screenWidth, screenHeight, 32, m_Font, testString1, 10, 10, 0.0f, 1.0f, 0.0f);
+	if (!result)
+	{
+		return false;
+	}
+
+	// 두 번째 텍스트 객체를 생성하고 초기화합니다.
+	m_TextString2 = new TextClass;
+
+	result = m_TextString2->Initialize(m_Direct3D->GetDevice(), m_Direct3D->GetDeviceContext(), screenWidth, screenHeight, 32, m_Font, testString2, 10, 50, 1.0f, 1.0f, 0.0f);
 	if (!result)
 	{
 		return false;
@@ -165,6 +188,39 @@ bool ApplicationClass::Initialize(int screenWidth, int screenHeight, HWND hwnd)
 
 void ApplicationClass::Shutdown()
 {
+	//Release the two text objects.
+	// Release the text string objects.
+	if (m_TextString2)
+	{
+		m_TextString2->Shutdown();
+		delete m_TextString2;
+		m_TextString2 = 0;
+	}
+
+	if (m_TextString1)
+	{
+		m_TextString1->Shutdown();
+		delete m_TextString1;
+		m_TextString1 = 0;
+	}
+
+	// Release the Font and the FontShader objects.
+	// Release the font object.
+	if (m_Font)
+	{
+		m_Font->Shutdown();
+		delete m_Font;
+		m_Font = 0;
+	}
+
+	// Release the font shader object.
+	if (m_FontShader)
+	{
+		m_FontShader->Shutdown();
+		delete m_FontShader;
+		m_FontShader = 0;
+	}
+
 	// Release the timer object.
 	if (m_Timer)
 	{
@@ -232,17 +288,8 @@ void ApplicationClass::Shutdown()
 
 bool ApplicationClass::Frame()
 {
-	float frameTime;
 	bool result;
-	
-	// Update the system stats.
-	m_Timer->Frame();
 
-	// Get the current frame time.
-	frameTime = m_Timer->GetTime();
-
-	// Update the sprite object using the frame time.
-	m_Sprite->Update(frameTime);
 
 	// Render the graphics scene.
 	result = Render();
@@ -252,24 +299,6 @@ bool ApplicationClass::Frame()
 	}
 
 	return true;
-
-	//static float rotation = 0.0f;
-	//bool result;
-
-	//// Update the rotation variable each frame.
-	//rotation -= 0.0174532925f * 0.5f;
-	//if (rotation < 0.0f)
-	//{
-	//	rotation += 360.0f;
-	//}
-	//// Render the graphics scene.
-	//result = Render(rotation);
-	//if (!result)
-	//{
-	//	return false;
-	//}
-
-	//return true;
 }
 
 // Render 함수는 전체 렌더링 과정을 제어하며, 이번 단계에서 가장 많은 변경이 이루어졌습니다.
@@ -285,36 +314,58 @@ bool ApplicationClass::Render()
 	XMMATRIX worldMatrix, viewMatrix, orthoMatrix;
 	bool result;
 
-	// 장면을 시작하기 위해 버퍼를 초기화합니다.
+	// 장면을 시작하기 위해 버퍼를 비웁니다 (검은색으로 초기화).
 	m_Direct3D->BeginScene(0.0f, 0.0f, 0.0f, 1.0f);
 
-	// 2D 렌더링을 위해 D3DClass로부터 직교 투영 행렬(Ortho Matrix)을 가져옵니다.
-	// 일반적인 투영 행렬(Projection Matrix) 대신 이 행렬을 전달할 것입니다.
+	// 카메라 및 D3D 객체로부터 월드, 뷰, 직교 투영(Ortho) 행렬을 가져옵니다.
 	m_Direct3D->GetWorldMatrix(worldMatrix);
 	m_Camera->GetViewMatrix(viewMatrix);
 	m_Direct3D->GetOrthoMatrix(orthoMatrix);
-	
-	// Turn off the Z buffer to begin all 2D rendering.
+
+	// 텍스트를 렌더링하기 전에 Z 버퍼(깊이 시험)를 꺼야 합니다. 
+	// 그래야 깊이 정보에 상관없이 텍스트가 화면 최상단에 그려집니다.
+	// 두 번째로, 알파 블렌딩을 활성화하여 글자 주변의 검은색 배경은 버리고 
+	// 실제 글자 픽셀만 그려지도록 합니다. 만약 알파 블렌딩을 끄고 텍스트를 그리면
+	// 글자 주변에 원치 않는 검은색 상자가 나타나게 됩니다.
+
+	// 2D 렌더링을 위해 Z 버퍼를 끄고 알파 블렌딩을 활성화합니다.
 	m_Direct3D->TurnZBufferOff();
+	m_Direct3D->EnableAlphaBlending();
 
-	// Put the sprite vertex and index buffers on the graphics pipeline to prepare them for drawing.
-	result = m_Sprite->Render(m_Direct3D->GetDeviceContext());
+	// 폰트와 폰트 셰이더를 사용하여 첫 번째 텍스트 문자열을 렌더링합니다.
+
+	// 첫 번째 텍스트 문자열의 버퍼를 파이프라인에 설정합니다.
+	m_TextString1->Render(m_Direct3D->GetDeviceContext());
+
+	// 폰트 셰이더를 통해 실제로 화면에 그립니다.
+	result = m_FontShader->Render(m_Direct3D->GetDeviceContext(), m_TextString1->GetIndexCount(), worldMatrix, viewMatrix, orthoMatrix,
+		m_Font->GetTexture(), m_TextString1->GetPixelColor());
 	if (!result)
 	{
 		return false;
 	}
 
-	// Render the sprite with the texture shader.
-	result = m_TextureShader->Render(m_Direct3D->GetDeviceContext(), m_Sprite->GetIndexCount(), worldMatrix, viewMatrix, orthoMatrix, m_Sprite->GetTexture());
+	// 폰트와 폰트 셰이더를 사용하여 두 번째 텍스트 문자열을 렌더링합니다.
+
+	// 두 번째 텍스트 문자열의 버퍼를 파이프라인에 설정합니다.
+	m_TextString2->Render(m_Direct3D->GetDeviceContext());
+
+	// 폰트 셰이더를 통해 실제로 화면에 그립니다.
+	result = m_FontShader->Render(m_Direct3D->GetDeviceContext(), m_TextString2->GetIndexCount(), worldMatrix, viewMatrix, orthoMatrix,
+		m_Font->GetTexture(), m_TextString2->GetPixelColor());
 	if (!result)
 	{
 		return false;
 	}
 
-	// 모든 2D 렌더링이 완료되었으므로, 다음 차례의 3D 렌더링을 위해 Z-버퍼를 다시 켭니다.
+	// 텍스트 렌더링이 끝났으므로, 이후의 3D 렌더링이 정상적으로 출력되도록 
+	// Z 버퍼를 다시 켜고 알파 블렌딩을 비활성화합니다.
+
+	// 2D 렌더링 완료 후 Z 버퍼를 켜고 알파 블렌딩을 비활성화합니다.
 	m_Direct3D->TurnZBufferOn();
+	m_Direct3D->DisableAlphaBlending();
 
-	// 렌더링된 장면을 화면에 출력(Present)합니다.
+	// 렌더링된 장면을 화면에 표시합니다.
 	m_Direct3D->EndScene();
 
 	return true;

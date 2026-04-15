@@ -52,6 +52,9 @@ public:
     void TurnZBufferOn();
     void TurnZBufferOff();
 
+    // 알파 블렌딩을 켜고 끄는 두 가지 새로운 기능이 추가되었습니다.
+    void EnableAlphaBlending();
+    void DisableAlphaBlending();
 private:
     bool m_vsync_enabled;
     int m_videoCardMemory;
@@ -71,6 +74,10 @@ private:
 
     // 2D 도면을 위한 새로운 깊이 스텐실 상태도 추가되었습니다.
 	ID3D11DepthStencilState* m_depthDisabledStencilState;
+
+    // 새로운 혼합 상태도 두 가지 추가되었습니다.
+    ID3D11BlendState* m_alphaEnableBlendingState;
+    ID3D11BlendState* m_alphaDisableBlendingState;
 };
 
 #endif

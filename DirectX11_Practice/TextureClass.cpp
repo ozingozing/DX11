@@ -35,7 +35,7 @@ bool TextureClass::Initialize(ID3D11Device* device, ID3D11DeviceContext* deviceC
 	unsigned int rowPitch;
 	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
 	// 먼저 TextureClass::LoadTarga32Bit 함수를 호출하여 타가 파일을 m_targaData 배열에 로드합니다.
-		// 타가 이미지 데이터를 메모리로 로드합니다.
+	// 타가 이미지 데이터를 메모리로 로드합니다.
 	//result = LoadTarga32Bit(hwnd,filename);
 	result = LoadImageFile(filename);
 	if (!result)

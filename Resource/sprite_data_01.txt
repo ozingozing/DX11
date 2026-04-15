@@ -1,0 +1,6 @@
+4
+../Resource/sprite01.tga
+../Resource/sprite02.tga
+../Resource/sprite03.tga
+../Resource/sprite04.tga
+250

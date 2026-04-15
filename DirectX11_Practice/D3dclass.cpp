@@ -16,6 +16,10 @@ D3DClass::D3DClass()
 
 	// 클래스 생성자에서 새 깊이 스텐실 상태를 null로 초기화합니다.
 	m_depthDisabledStencilState = 0;
+
+	// Set the two new blending states to null.
+	m_alphaEnableBlendingState = 0;
+	m_alphaDisableBlendingState = 0;
 }
 
 
@@ -50,6 +54,9 @@ bool D3DClass::Initialize(int screenWidth, int screenHeight, bool vsync, HWND hw
 
 	// 새로운 깊이 스텐실 설정을 위한 새로운 깊이 스텐실 설명 변수가 있습니다.
 	D3D11_DEPTH_STENCIL_DESC depthDisabledStencilDesc;
+	// 두 가지 새로운 혼합 상태를 설정하기 위한 새로운 설명 변수가 추가되었습니다.
+	D3D11_BLEND_DESC blendStateDescription;
+
 
 	// vsync(Vertical Synchronization 수직동기화) 설정을 저장합니다.
 	m_vsync_enabled = vsync;
@@ -526,6 +533,47 @@ bool D3DClass::Initialize(int screenWidth, int screenHeight, bool vsync, HWND hw
 		return false;
 	}
 
+	// 1. 블렌드 상태 설정 구조체를 초기화합니다.
+	// 블렌드 상태 설정 구조체를 0으로 비웁니다.
+	ZeroMemory(&blendStateDescription, sizeof(D3D11_BLEND_DESC));
+
+	// 알파 블렌딩(Alpha Blending)이 활성화된 설정을 생성합니다.
+	// BlendEnable을 TRUE로 설정하고, DestBlend를 D3D11_BLEND_INV_SRC_ALPHA로 변경합니다.
+	// 그 외 설정들은 기본값으로 설정되며, 상세 내용은 Windows DirectX 그래픽 문서를 참조하십시오.
+
+	// 알파 블렌딩 활성화 설정
+	blendStateDescription.RenderTarget[0].BlendEnable = TRUE;              // 블렌딩 사용 여부: 예
+	blendStateDescription.RenderTarget[0].SrcBlend = D3D11_BLEND_ONE;      // 소스 블렌드 인자: 원본 색상 그대로 사용
+	blendStateDescription.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA; // 대상 블렌드 인자: 1 - 원본 알파값
+	blendStateDescription.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;    // 블렌딩 연산: 더하기 (Source + Destination)
+
+	// 알파 채널 자체에 대한 블렌딩 설정
+	blendStateDescription.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+	blendStateDescription.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
+	blendStateDescription.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+
+	// 렌더 타깃 쓰기 마스크 설정 (0x0f는 RGBA 모든 채널에 쓰기를 허용한다는 의미)
+	blendStateDescription.RenderTarget[0].RenderTargetWriteMask = 0x0f;
+
+	// 앞서 설정한 구조체를 바탕으로 실제 '알파 활성화 블렌드 상태' 객체를 생성합니다.
+	result = m_device->CreateBlendState(&blendStateDescription, &m_alphaEnableBlendingState);
+	if (FAILED(result))
+	{
+		return false;
+	}
+
+	// 이제 '알파 비활성화 상태'를 만들기 위해 BlendEnable을 FALSE로 변경합니다.
+	// 나머지 설정은 그대로 유지해도 무방합니다.
+	blendStateDescription.RenderTarget[0].BlendEnable = FALSE;
+
+	// 수정된 설정을 바탕으로 '알파 비활성화 블렌드 상태' 객체를 생성합니다.
+	// 이제 상황에 따라 켜고 끌 수 있는 두 개의 블렌드 상태(State)를 보유하게 되었습니다.
+	result = m_device->CreateBlendState(&blendStateDescription, &m_alphaDisableBlendingState);
+	if (FAILED(result))
+	{
+		return false;
+	}
+
 	return true;
 }
 
@@ -535,6 +583,19 @@ void D3DClass::Shutdown()
 	if (m_swapChain)
 	{
 		m_swapChain->SetFullscreenState(false, NULL);
+	}
+
+	//Release the two new blending states.
+	if (m_alphaEnableBlendingState)
+	{
+		m_alphaEnableBlendingState->Release();
+		m_alphaEnableBlendingState = 0;
+	}
+
+	if (m_alphaDisableBlendingState)
+	{
+		m_alphaDisableBlendingState->Release();
+		m_alphaDisableBlendingState = 0;
 	}
 
 	// Here we release the new depth stencil during the Shutdown function.
@@ -700,5 +761,39 @@ void D3DClass::TurnZBufferOn()
 void D3DClass::TurnZBufferOff()
 {
 	m_deviceContext->OMSetDepthStencilState(m_depthDisabledStencilState, 1);
+	return;
+}
+
+void D3DClass::EnableAlphaBlending()
+{
+	float blendFactor[4];
+
+
+	// Setup the blend factor.
+	blendFactor[0] = 0.0f;
+	blendFactor[1] = 0.0f;
+	blendFactor[2] = 0.0f;
+	blendFactor[3] = 0.0f;
+
+	// Turn on the alpha blending.
+	m_deviceContext->OMSetBlendState(m_alphaEnableBlendingState, blendFactor, 0xffffffff);
+
+	return;
+}
+
+void D3DClass::DisableAlphaBlending()
+{
+	float blendFactor[4];
+
+
+	// Setup the blend factor.
+	blendFactor[0] = 0.0f;
+	blendFactor[1] = 0.0f;
+	blendFactor[2] = 0.0f;
+	blendFactor[3] = 0.0f;
+
+	// Turn off the alpha blending.
+	m_deviceContext->OMSetBlendState(m_alphaDisableBlendingState, blendFactor, 0xffffffff);
+
 	return;
 }

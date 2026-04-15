@@ -293,7 +293,7 @@ void ColorShaderClass::OutputShaderErrorMessage(ID3D10Blob* errorMessage, HWND h
 {
 	char* compileErrors;
 	unsigned long long bufferSize, i;
-	ofstream fout;
+	std::ofstream fout;
 
 
 	// 오류 메시지 텍스트 버퍼에 대한 포인터를 가져옵니다.
