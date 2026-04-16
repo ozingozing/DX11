@@ -8,18 +8,10 @@ ApplicationClass::ApplicationClass()
 {
 	m_Direct3D = 0;
 	m_Camera = 0;
-	m_Model = 0;
-	m_LightShader = 0;
-	m_Lights = 0;
-	m_TextureShader = 0;
-
-	m_Sprite = 0;
-	m_Timer = 0;
-
 	m_FontShader = 0;
 	m_Font = 0;
-	m_TextString1 = 0;
-	m_TextString2 = 0;
+	m_Fps = 0;
+	m_FpsString = 0;
 }
 
 
@@ -38,7 +30,7 @@ ApplicationClass::~ApplicationClass()
 // so this model loads in a 3D cube object for rendering.
 bool ApplicationClass::Initialize(int screenWidth, int screenHeight, HWND hwnd)
 {
-	char testString1[32], testString2[32];
+	char fpsString[32];
 	bool result;
 
 
@@ -52,28 +44,23 @@ bool ApplicationClass::Initialize(int screenWidth, int screenHeight, HWND hwnd)
 		return false;
 	}
 
-	// Create the camera object.
+	// Create and initialize the camera object.
 	m_Camera = new CameraClass;
 
-	// Set the initial position of the camera.
 	m_Camera->SetPosition(0.0f, 0.0f, -10.0f);
 	m_Camera->Render();
 
-	// 텍스트 렌더링을 위한 새로운 FontShaderClass 객체를 초기화합니다.
-
-	// 폰트 셰이더 객체를 생성하고 초기화합니다.
+	// Create and initialize the font shader object.
 	m_FontShader = new FontShaderClass;
 
 	result = m_FontShader->Initialize(m_Direct3D->GetDevice(), hwnd);
 	if (!result)
 	{
-		MessageBox(hwnd, L"폰트 셰이더 객체를 초기화할 수 없습니다.", L"에러", MB_OK);
+		MessageBox(hwnd, L"Could not initialize the font shader object.", L"Error", MB_OK);
 		return false;
 	}
 
-	// TextClass가 사용할 문장을 구축할 FontClass를 초기화합니다.
-
-	// 폰트 객체를 생성하고 초기화합니다.
+	// Create and initialize the font object.
 	m_Font = new FontClass;
 
 	result = m_Font->Initialize(m_Direct3D->GetDevice(), m_Direct3D->GetDeviceContext(), 0);
@@ -82,129 +69,48 @@ bool ApplicationClass::Initialize(int screenWidth, int screenHeight, HWND hwnd)
 		return false;
 	}
 
-	// 화면에 출력할 두 개의 문장을 설정합니다.
+	// 여기서 FpsClass를 생성하고 초기화합니다. 
+	// 프로그램이 실행된 후 1초가 지나기 전까지는 정확한 FPS 값을 알 수 없으므로, 초기 FPS 값을 미리 설정해 둡니다.
+	// 또한 화면에 FPS 수치를 문자열로 렌더링하기 위해 TextClass를 생성합니다.
+	// 참고: FpsClass 내부에 렌더링 기능을 포함시킬 수도 있었지만, 가능한 한 코드 간의 결합도를 낮추는(Decouple) 것이 더 좋은 프로그래밍 관례입니다.
 
-	// 표시할 문자열 내용을 복사합니다.
-	strcpy_s(testString1, "Hello");
-	strcpy_s(testString2, "Goodbye");
+	// FPS 객체를 생성하고 초기화합니다.
+	m_Fps = new FpsClass();
+	m_Fps->Initialize();
 
-	// 위에서 생성한 두 개의 문자열을 렌더링하기 위해 두 개의 TextClass 객체를 생성합니다.
-	// 첫 번째 문장은 초록색(0, 1, 0)으로 설정하여 좌표 (10, 10)에 렌더링하고,
-	// 두 번째 문장은 노란색(1, 1, 0)으로 설정하여 좌표 (10, 50)에 렌더링합니다.
+	// 초기 FPS 값과 FPS 표시용 문자열을 설정합니다.
+	m_previousFps = -1;
+	strcpy_s(fpsString, "Fps: 0");
 
-	// 첫 번째 텍스트 객체를 생성하고 초기화합니다.
-	m_TextString1 = new TextClass;
+	// FPS 문자열을 렌더링하기 위한 텍스트 객체를 생성하고 초기화합니다.
+	m_FpsString = new TextClass;
 
-	result = m_TextString1->Initialize(m_Direct3D->GetDevice(), m_Direct3D->GetDeviceContext(), screenWidth, screenHeight, 32, m_Font, testString1, 10, 10, 0.0f, 1.0f, 0.0f);
+	// 텍스트 객체 초기화: (10, 10) 위치에 초록색(0.0, 1.0, 0.0)으로 텍스트를 배치합니다.
+	result = m_FpsString->Initialize(m_Direct3D->GetDevice(), m_Direct3D->GetDeviceContext(), screenWidth, screenHeight, 32, m_Font, fpsString, 10, 10, 0.0f, 1.0f, 0.0f);
 	if (!result)
 	{
 		return false;
 	}
-
-	// 두 번째 텍스트 객체를 생성하고 초기화합니다.
-	m_TextString2 = new TextClass;
-
-	result = m_TextString2->Initialize(m_Direct3D->GetDevice(), m_Direct3D->GetDeviceContext(), screenWidth, screenHeight, 32, m_Font, testString2, 10, 50, 1.0f, 1.0f, 0.0f);
-	if (!result)
-	{
-		return false;
-	}
-
-	return true;
-
-
-	//char modelFilename[128];
-	//char textureFilename[128];
-	//bool result;
-
-
-	//// Create and initialize the Direct3D object.
-	//m_Direct3D = new D3DClass;
-
-	//result = m_Direct3D->Initialize(screenWidth, screenHeight, VSYNC_ENABLED, hwnd, FULL_SCREEN, SCREEN_DEPTH, SCREEN_NEAR);
-	//if (!result)
-	//{
-	//	MessageBox(hwnd, L"Could not initialize Direct3D", L"Error", MB_OK);
-	//	return false;
-	//}
-
-	//// Create the camera object.
-	//m_Camera = new CameraClass;
-
-	//// Set the initial position of the camera.
-	//m_Camera->SetPosition(0.0f, 2.0f, -12.0f);
-
-	//// Create and initialize the model object.
-	//m_Model = new ModelClass;
-
-	//// Set the file anme of the model.
-	////strcpy_s(modelFilename, "../Resource/Cube.txt");
-	//strcpy_s(modelFilename, "../Resource/plane.txt");
-
-	//// Set the name of the texture file that we will be loading.
-	////C:\Users\sky2503\Desktop\stone01.tga
-	//strcpy_s(textureFilename, "../Resource/texture01.png");
-
-	//result = m_Model->Initialize(m_Direct3D->GetDevice(), m_Direct3D->GetDeviceContext(), modelFilename, textureFilename);
-	//if (!result)
-	//{
-	//	MessageBox(hwnd, L"Could not initialize the model object.", L"Error", MB_OK);
-	//	return false;
-	//}
-
-	//// 새로운 광원 셰이더 객체가 여기서 생성되고 초기화됩니다.
-	//// Create and initialize the light shader object.
-	//m_LightShader = new LightShaderClass;
-
-	//result = m_LightShader->Initialize(m_Direct3D->GetDevice(), hwnd);
-	//if (!result)
-	//{
-	//	MessageBox(hwnd, L"Could not initialize the light shader object.", L"Error", MB_OK);
-	//	return false;
-	//}
-
-	//// Set the number of lights we will use.
-	//m_numLights = 4;
-
-	//// Create and initialize the light objects array.
-	//m_Lights = new LightClass[m_numLights];
-
-	//// Manually set the color and position of each light.
-	//m_Lights[0].SetDiffuseColor(1.0f, 0.0f, 0.0f, 1.0f);  // Red
-	//m_Lights[0].SetPosition(-3.0f, 1.0f, 3.0f);
-
-	//m_Lights[1].SetDiffuseColor(0.0f, 1.0f, 0.0f, 1.0f);  // Green
-	//m_Lights[1].SetPosition(3.0f, 1.0f, 3.0f);
-
-	//m_Lights[2].SetDiffuseColor(0.0f, 0.0f, 1.0f, 1.0f);  // Blue
-	//m_Lights[2].SetPosition(-3.0f, 1.0f, -3.0f);
-
-	//m_Lights[3].SetDiffuseColor(1.0f, 1.0f, 1.0f, 1.0f);  // White
-	//m_Lights[3].SetPosition(3.0f, 1.0f, -3.0f);
-
-	//return true;
 }
 
 
 void ApplicationClass::Shutdown()
 {
-	//Release the two text objects.
-	// Release the text string objects.
-	if (m_TextString2)
+	// Release the text object for the fps string.
+	if (m_FpsString)
 	{
-		m_TextString2->Shutdown();
-		delete m_TextString2;
-		m_TextString2 = 0;
+		m_FpsString->Shutdown();
+		delete m_FpsString;
+		m_FpsString = 0;
 	}
 
-	if (m_TextString1)
+	// Release the fps object.
+	if (m_Fps)
 	{
-		m_TextString1->Shutdown();
-		delete m_TextString1;
-		m_TextString1 = 0;
+		delete m_Fps;
+		m_Fps = 0;
 	}
 
-	// Release the Font and the FontShader objects.
 	// Release the font object.
 	if (m_Font)
 	{
@@ -219,52 +125,6 @@ void ApplicationClass::Shutdown()
 		m_FontShader->Shutdown();
 		delete m_FontShader;
 		m_FontShader = 0;
-	}
-
-	// Release the timer object.
-	if (m_Timer)
-	{
-		delete m_Timer;
-		m_Timer = 0;
-	}
-
-	// Release the sprite object.
-	if (m_Sprite)
-	{
-		m_Sprite->Shutdown();
-		delete m_Sprite;
-		m_Sprite = 0;
-	}
-
-	// Release the texture shader object.
-	if (m_TextureShader)
-	{
-		m_TextureShader->Shutdown();
-		delete m_TextureShader;
-		m_TextureShader = 0;
-	}
-
-	// Release the light objects.
-	if (m_Lights)
-	{
-		delete[] m_Lights;
-		m_Lights = 0;
-	}
-
-	// Release the light shader object.
-	if (m_LightShader)
-	{
-		m_LightShader->Shutdown();
-		delete m_LightShader;
-		m_LightShader = 0;
-	}
-
-	// Release the model object.
-	if (m_Model)
-	{
-		m_Model->Shutdown();
-		delete m_Model;
-		m_Model = 0;
 	}
 
 	// Release the camera object.
@@ -289,7 +149,13 @@ void ApplicationClass::Shutdown()
 bool ApplicationClass::Frame()
 {
 	bool result;
-
+	// We use a new function to do the FPS updates and processing each frame.
+	// Update the frames per second each frame.
+	result = UpdateFps();
+	if (!result)
+	{
+		return false;
+	}
 
 	// Render the graphics scene.
 	result = Render();
@@ -301,72 +167,117 @@ bool ApplicationClass::Frame()
 	return true;
 }
 
-// Render 함수는 전체 렌더링 과정을 제어하며, 이번 단계에서 가장 많은 변경이 이루어졌습니다.
-// 1. 장면 초기화: 먼저 장면을 검은색(Black)으로 깨끗하게 지우는 것으로 시작합니다.
-// 2. 뷰 행렬 생성: 카메라 객체의 Render 함수를 호출하여, 초기화 시 설정된 위치 정보를 바탕으로 뷰 행렬을 생성합니다.
-// 3. 행렬 정보 취득: 생성된 뷰 행렬의 복사본을 카메라 클래스에서 가져오고, D3DClass 객체로부터 월드 행렬과 투영 행렬의 복사본을 각각 가져옵니다.
-
-// 4. 모델 준비: ModelClass::Render 함수를 호출하여 초록색 삼각형의 기하학적 구조(정점 및 인덱스 데이터)를 그래픽 파이프라인에 배치합니다.
-// 5. 셰이더 렌더링: 정점들이 준비되면 컬러 셰이더를 호출합니다. 이때 모델 정보와 각 정점의 위치를 결정할 세 가지 행렬(World, View, Projection)을 전달하여 실제 그리기를 수행합니다.
-// 6. 출력: 초록색 삼각형이 백 버퍼(Back Buffer)에 그려지면, EndScene을 호출하여 완성된 장면을 실제 화면에 표시합니다.
 bool ApplicationClass::Render()
 {
 	XMMATRIX worldMatrix, viewMatrix, orthoMatrix;
 	bool result;
 
-	// 장면을 시작하기 위해 버퍼를 비웁니다 (검은색으로 초기화).
+
+	// Clear the buffers to begin the scene.
 	m_Direct3D->BeginScene(0.0f, 0.0f, 0.0f, 1.0f);
 
-	// 카메라 및 D3D 객체로부터 월드, 뷰, 직교 투영(Ortho) 행렬을 가져옵니다.
+	// Get the world, view, and projection matrices from the camera and d3d objects.
 	m_Direct3D->GetWorldMatrix(worldMatrix);
 	m_Camera->GetViewMatrix(viewMatrix);
 	m_Direct3D->GetOrthoMatrix(orthoMatrix);
 
-	// 텍스트를 렌더링하기 전에 Z 버퍼(깊이 시험)를 꺼야 합니다. 
-	// 그래야 깊이 정보에 상관없이 텍스트가 화면 최상단에 그려집니다.
-	// 두 번째로, 알파 블렌딩을 활성화하여 글자 주변의 검은색 배경은 버리고 
-	// 실제 글자 픽셀만 그려지도록 합니다. 만약 알파 블렌딩을 끄고 텍스트를 그리면
-	// 글자 주변에 원치 않는 검은색 상자가 나타나게 됩니다.
-
-	// 2D 렌더링을 위해 Z 버퍼를 끄고 알파 블렌딩을 활성화합니다.
+	// Disable the Z buffer and enable alpha blending for 2D rendering.
 	m_Direct3D->TurnZBufferOff();
 	m_Direct3D->EnableAlphaBlending();
+	// Each frame we Render the FPS string to the screen.
 
-	// 폰트와 폰트 셰이더를 사용하여 첫 번째 텍스트 문자열을 렌더링합니다.
+	// Render the fps text string using the font shader.
+	m_FpsString->Render(m_Direct3D->GetDeviceContext());
 
-	// 첫 번째 텍스트 문자열의 버퍼를 파이프라인에 설정합니다.
-	m_TextString1->Render(m_Direct3D->GetDeviceContext());
-
-	// 폰트 셰이더를 통해 실제로 화면에 그립니다.
-	result = m_FontShader->Render(m_Direct3D->GetDeviceContext(), m_TextString1->GetIndexCount(), worldMatrix, viewMatrix, orthoMatrix,
-		m_Font->GetTexture(), m_TextString1->GetPixelColor());
+	result = m_FontShader->Render(m_Direct3D->GetDeviceContext(), m_FpsString->GetIndexCount(), worldMatrix, viewMatrix, orthoMatrix,
+		m_Font->GetTexture(), m_FpsString->GetPixelColor());
 	if (!result)
 	{
 		return false;
 	}
 
-	// 폰트와 폰트 셰이더를 사용하여 두 번째 텍스트 문자열을 렌더링합니다.
-
-	// 두 번째 텍스트 문자열의 버퍼를 파이프라인에 설정합니다.
-	m_TextString2->Render(m_Direct3D->GetDeviceContext());
-
-	// 폰트 셰이더를 통해 실제로 화면에 그립니다.
-	result = m_FontShader->Render(m_Direct3D->GetDeviceContext(), m_TextString2->GetIndexCount(), worldMatrix, viewMatrix, orthoMatrix,
-		m_Font->GetTexture(), m_TextString2->GetPixelColor());
-	if (!result)
-	{
-		return false;
-	}
-
-	// 텍스트 렌더링이 끝났으므로, 이후의 3D 렌더링이 정상적으로 출력되도록 
-	// Z 버퍼를 다시 켜고 알파 블렌딩을 비활성화합니다.
-
-	// 2D 렌더링 완료 후 Z 버퍼를 켜고 알파 블렌딩을 비활성화합니다.
+	// Enable the Z buffer and disable alpha blending now that 2D rendering is complete.
 	m_Direct3D->TurnZBufferOn();
 	m_Direct3D->DisableAlphaBlending();
 
-	// 렌더링된 장면을 화면에 표시합니다.
+	// Present the rendered scene to the screen.
 	m_Direct3D->EndScene();
+
+	return true;
+}
+
+// 새로운 UpdateFps 함수는 매 프레임마다 FPS 카운터를 업데이트합니다.
+// 만약 FPS 수치가 이전 프레임과 달라졌다면, 화면에 렌더링되는 FPS 텍스트 문자열도 함께 갱신합니다.
+// 또한 성능 상태에 따라 색상을 설정합니다: 60 FPS 이상은 초록색, 60 미만은 노란색, 30 미만은 빨간색입니다.
+// 일반적으로 이런 함수는 사용자 인터페이스(UI) 전용 클래스에 위치해야 하지만, 
+// 튜토리얼의 단순화를 위해 현재는 ApplicationClass에 추가해 두었습니다.
+
+bool ApplicationClass::UpdateFps()
+{
+	int fps;
+	char tempString[16], finalString[16];
+	float red, green, blue;
+	bool result;
+
+	// 매 프레임마다 FPS를 업데이트합니다 (내부 카운트 증가 및 1초 체크).
+	m_Fps->Frame();
+
+	// 현재 측정된 FPS 값을 가져옵니다.
+	fps = m_Fps->GetFps();
+
+	// 이전 프레임의 FPS와 동일하다면, 텍스트 문자열을 갱신할 필요가 없으므로 그대로 리턴합니다.
+	if (m_previousFps == fps)
+	{
+		return true;
+	}
+
+	// 다음 프레임에서의 확인을 위해 현재 FPS를 저장합니다.
+	m_previousFps = fps;
+
+	// FPS 수치가 100,000을 넘지 않도록 제한합니다 (문자열 버퍼 오버플로우 방지).
+	if (fps > 99999)
+	{
+		fps = 99999;
+	}
+
+	// 정수형 FPS 값을 문자열 형식으로 변환합니다.
+	sprintf_s(tempString, "%d", fps);
+
+	// 출력할 최종 FPS 문자열을 구성합니다. (예: "Fps: 60")
+	strcpy_s(finalString, "Fps: ");
+	strcat_s(finalString, tempString);
+
+	// 1. FPS가 60 이상이면 텍스트 색상을 초록색으로 설정합니다.
+	if (fps >= 60)
+	{
+		red = 0.0f;
+		green = 1.0f;
+		blue = 0.0f;
+	}
+
+	// 2. FPS가 60 미만이면 텍스트 색상을 노란색으로 설정합니다.
+	if (fps < 60)
+	{
+		red = 1.0f;
+		green = 1.0f;
+		blue = 0.0f;
+	}
+
+	// 3. FPS가 30 미만이면 텍스트 색상을 빨간색으로 설정합니다.
+	if (fps < 30)
+	{
+		red = 1.0f;
+		green = 0.0f;
+		blue = 0.0f;
+	}
+
+	// 새로운 문자열 정보와 색상으로 문장의 정점 버퍼를 갱신합니다.
+	// 여기서 이전에 배운 Map/Unmap 로직이 내부적으로 호출됩니다.
+	result = m_FpsString->UpdateText(m_Direct3D->GetDeviceContext(), m_Font, finalString, 10, 10, red, green, blue);
+	if (!result)
+	{
+		return false;
+	}
 
 	return true;
 }

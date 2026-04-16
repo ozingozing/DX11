@@ -5,21 +5,17 @@
 #ifndef _APPLICATIONCLASS_H_
 #define _APPLICATIONCLASS_H_
 
+
 ///////////////////////
 // MY CLASS INCLUDES //
 ///////////////////////
-#include "d3dclass.h"
-#include "cameraclass.h"
-#include "modelclass.h"
-#include "colorshaderclass.h"
-#include "TextureShaderClass.h"
-#include "LightClass.h"
-#include "LightShaderClass.h"
-#include "Spriteclass.h"
-#include "Timerclass.h"
-#include "fontshaderclass.h"
-#include "fontclass.h"
-#include "textclass.h"
+#include "D3DClass.h"
+#include "CameraClass.h"
+#include "FontShaderClass.h"
+#include "FontClass.h"
+#include "TextClass.h"
+#include "FpsClass.h"
+
 
 /////////////
 // GLOBALS //
@@ -29,39 +25,32 @@ const bool VSYNC_ENABLED = true;
 const float SCREEN_DEPTH = 1000.0f;
 const float SCREEN_NEAR = 0.3f;
 
+
 ////////////////////////////////////////////////////////////////////////////////
 // Class name: ApplicationClass
 ////////////////////////////////////////////////////////////////////////////////
 class ApplicationClass
 {
 public:
-	ApplicationClass();
-	ApplicationClass(const ApplicationClass&);
-	~ApplicationClass();
+    ApplicationClass();
+    ApplicationClass(const ApplicationClass&);
+    ~ApplicationClass();
 
-	bool Initialize(int, int, HWND);
-	void Shutdown();
-	bool Frame();
-
-private:
-	bool Render();
+    bool Initialize(int, int, HWND);
+    void Shutdown();
+    bool Frame();
 
 private:
-	D3DClass* m_Direct3D;
-	CameraClass* m_Camera;
-	ModelClass* m_Model;
-	LightShaderClass* m_LightShader;
-	TextureShaderClass* m_TextureShader;
+    bool Render();
+    bool UpdateFps();
 
-	LightClass* m_Lights;
-	int m_numLights;
-	int m_renderX, m_renderY;
-
-	SpriteClass* m_Sprite;
-	TimerClass* m_Timer;
-
-	FontShaderClass* m_FontShader;
-	FontClass* m_Font;
-	TextClass* m_TextString1, * m_TextString2;
+private:
+    D3DClass* m_Direct3D;
+    CameraClass* m_Camera;
+    FontShaderClass* m_FontShader;
+    FontClass* m_Font;
+    FpsClass* m_Fps;
+    TextClass* m_FpsString;
+    int m_previousFps;
 };
 #endif
