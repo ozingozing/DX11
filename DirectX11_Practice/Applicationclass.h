@@ -14,7 +14,7 @@
 #include "FontShaderClass.h"
 #include "FontClass.h"
 #include "TextClass.h"
-#include "FpsClass.h"
+#include "InputClass.h"
 
 
 /////////////
@@ -38,19 +38,17 @@ public:
 
     bool Initialize(int, int, HWND);
     void Shutdown();
-    bool Frame();
+    bool Frame(InputClass*);
 
 private:
     bool Render();
-    bool UpdateFps();
+    bool UpdateMouseStrings(int, int, bool);
 
 private:
     D3DClass* m_Direct3D;
     CameraClass* m_Camera;
     FontShaderClass* m_FontShader;
     FontClass* m_Font;
-    FpsClass* m_Fps;
-    TextClass* m_FpsString;
-    int m_previousFps;
+    TextClass* m_MouseStrings;
 };
 #endif

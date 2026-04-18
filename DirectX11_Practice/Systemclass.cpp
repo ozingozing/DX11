@@ -23,19 +23,24 @@ bool SystemClass::Initialize()
 	bool result;
 
 
-	// 변수를 함수에 전달하기 전에 화면의 너비와 높이를 0으로 초기화하십시오.
+	// Initialize the width and height of the screen to zero before sending the variables into the function.
 	screenWidth = 0;
 	screenHeight = 0;
 
-	// 윈도우 API를 초기화합니다.
+	// Initialize the windows api.
 	InitializeWindows(screenWidth, screenHeight);
 
-	// 입력 객체를 생성하고 초기화합니다. 이 객체는 사용자로부터 키보드 입력을 읽는 데 사용됩니다.
+	// Create and initialize the input object.  This object will be used to handle reading the keyboard input from the user.
 	m_Input = new InputClass;
+	//The first change is that the Initialize function of the updated InputClass now takes in additional variables.
 
-	m_Input->Initialize();
+	result = m_Input->Initialize(m_hinstance, m_hwnd, screenWidth, screenHeight);
+	if (!result)
+	{
+		return false;
+	}
 
-	// 애플리케이션 클래스 객체를 생성하고 초기화합니다. 이 객체는 이 애플리케이션의 모든 그래픽 렌더링을 처리합니다.
+	// Create and initialize the application class object.  This object will handle rendering all the graphics for this application.
 	m_Application = new ApplicationClass;
 
 	result = m_Application->Initialize(screenWidth, screenHeight, m_hwnd);
@@ -112,30 +117,7 @@ void SystemClass::Run()
 
 LRESULT SystemClass::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam, LPARAM lparam)
 {
-	switch (umsg)
-	{
-		// Check if a key has been pressed on the keyboard.
-	case WM_KEYDOWN:
-	{
-		// If a key is pressed send it to the input object so it can record that state.
-		m_Input->KeyDown((unsigned int)wparam);
-		return 0;
-	}
-
-	// Check if a key has been released on the keyboard.
-	case WM_KEYUP:
-	{
-		// If a key is released then send it to the input object so it can unset the state for that key.
-		m_Input->KeyUp((unsigned int)wparam);
-		return 0;
-	}
-
-	// Any other messages send to the default message handler as our application won't make use of them.
-	default:
-	{
-		return DefWindowProc(hwnd, umsg, wparam, lparam);
-	}
-	}
+	return DefWindowProc(hwnd, umsg, wparam, lparam);
 }
 
 bool SystemClass::Frame()
@@ -143,19 +125,20 @@ bool SystemClass::Frame()
 	bool result;
 
 
-	// Check if the user pressed escape and wants to exit the application.
-	if (m_Input->IsKeyDown(VK_ESCAPE))
-	{
-		return false;
-	}
-
-	// Do the frame processing for the application class object.
-	result = m_Application->Frame();
+	// Do the input frame processing.
+	result = m_Input->Frame();
 	if (!result)
 	{
 		return false;
 	}
 
+	// Do the frame processing for the application class object.
+	result = m_Application->Frame(m_Input);
+	if (!result)
+	{
+		return false;
+	}
+	
 	return true;
 }
 

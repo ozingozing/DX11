@@ -10,8 +10,7 @@ ApplicationClass::ApplicationClass()
 	m_Camera = 0;
 	m_FontShader = 0;
 	m_Font = 0;
-	m_Fps = 0;
-	m_FpsString = 0;
+	m_MouseStrings = 0;
 }
 
 
@@ -30,7 +29,7 @@ ApplicationClass::~ApplicationClass()
 // so this model loads in a 3D cube object for rendering.
 bool ApplicationClass::Initialize(int screenWidth, int screenHeight, HWND hwnd)
 {
-	char fpsString[32];
+	char mouseString1[32], mouseString2[32], mouseString3[32];
 	bool result;
 
 
@@ -68,47 +67,49 @@ bool ApplicationClass::Initialize(int screenWidth, int screenHeight, HWND hwnd)
 	{
 		return false;
 	}
+	//Here we setup the three mouse strings and TextClass objects.Two for the position of the mouse, and one for the button status.
 
-	// 여기서 FpsClass를 생성하고 초기화합니다. 
-	// 프로그램이 실행된 후 1초가 지나기 전까지는 정확한 FPS 값을 알 수 없으므로, 초기 FPS 값을 미리 설정해 둡니다.
-	// 또한 화면에 FPS 수치를 문자열로 렌더링하기 위해 TextClass를 생성합니다.
-	// 참고: FpsClass 내부에 렌더링 기능을 포함시킬 수도 있었지만, 가능한 한 코드 간의 결합도를 낮추는(Decouple) 것이 더 좋은 프로그래밍 관례입니다.
+	// Set the initial mouse strings.
+	strcpy_s(mouseString1, "Mouse X: 0");
+	strcpy_s(mouseString2, "Mouse Y: 0");
+	strcpy_s(mouseString3, "Mouse Button: No");
 
-	// FPS 객체를 생성하고 초기화합니다.
-	m_Fps = new FpsClass();
-	m_Fps->Initialize();
+	// Create and initialize the text objects for the mouse strings.
+	m_MouseStrings = new TextClass[3];
 
-	// 초기 FPS 값과 FPS 표시용 문자열을 설정합니다.
-	m_previousFps = -1;
-	strcpy_s(fpsString, "Fps: 0");
-
-	// FPS 문자열을 렌더링하기 위한 텍스트 객체를 생성하고 초기화합니다.
-	m_FpsString = new TextClass;
-
-	// 텍스트 객체 초기화: (10, 10) 위치에 초록색(0.0, 1.0, 0.0)으로 텍스트를 배치합니다.
-	result = m_FpsString->Initialize(m_Direct3D->GetDevice(), m_Direct3D->GetDeviceContext(), screenWidth, screenHeight, 32, m_Font, fpsString, 10, 10, 0.0f, 1.0f, 0.0f);
+	result = m_MouseStrings[0].Initialize(m_Direct3D->GetDevice(), m_Direct3D->GetDeviceContext(), screenWidth, screenHeight, 32, m_Font, mouseString1, 10, 10, 1.0f, 1.0f, 1.0f);
 	if (!result)
 	{
 		return false;
 	}
+
+	result = m_MouseStrings[1].Initialize(m_Direct3D->GetDevice(), m_Direct3D->GetDeviceContext(), screenWidth, screenHeight, 32, m_Font, mouseString1, 10, 35, 1.0f, 1.0f, 1.0f);
+	if (!result)
+	{
+		return false;
+	}
+
+	result = m_MouseStrings[2].Initialize(m_Direct3D->GetDevice(), m_Direct3D->GetDeviceContext(), screenWidth, screenHeight, 32, m_Font, mouseString1, 10, 60, 1.0f, 1.0f, 1.0f);
+	if (!result)
+	{
+		return false;
+	}
+
+	return true;
 }
 
 
 void ApplicationClass::Shutdown()
 {
-	// Release the text object for the fps string.
-	if (m_FpsString)
+	// Release the text objects for the mouse strings.
+	if (m_MouseStrings)
 	{
-		m_FpsString->Shutdown();
-		delete m_FpsString;
-		m_FpsString = 0;
-	}
+		m_MouseStrings[0].Shutdown();
+		m_MouseStrings[1].Shutdown();
+		m_MouseStrings[2].Shutdown();
 
-	// Release the fps object.
-	if (m_Fps)
-	{
-		delete m_Fps;
-		m_Fps = 0;
+		delete[] m_MouseStrings;
+		m_MouseStrings = 0;
 	}
 
 	// Release the font object.
@@ -146,12 +147,27 @@ void ApplicationClass::Shutdown()
 }
 
 
-bool ApplicationClass::Frame()
+bool ApplicationClass::Frame(InputClass* Input)
 {
-	bool result;
-	// We use a new function to do the FPS updates and processing each frame.
-	// Update the frames per second each frame.
-	result = UpdateFps();
+	int mouseX, mouseY;
+	bool result, mouseDown;
+	//We now check for the escape key press in this function instead of the SystemClass.
+
+	// Check if the user pressed escape and wants to exit the application.
+	if (Input->IsEscapePressed())
+	{
+		return false;
+	}
+	//Each frame we will now get the mouse location and button status from the Input object and then update the mouse strings.
+
+	// Get the location of the mouse from the input object,
+	Input->GetMouseLocation(mouseX, mouseY);
+
+	// Check if the mouse has been pressed.
+	mouseDown = Input->IsMousePressed();
+
+	// Update the mouse strings each frame.
+	result = UpdateMouseStrings(mouseX, mouseY, mouseDown);
 	if (!result)
 	{
 		return false;
@@ -170,6 +186,7 @@ bool ApplicationClass::Frame()
 bool ApplicationClass::Render()
 {
 	XMMATRIX worldMatrix, viewMatrix, orthoMatrix;
+	int i;
 	bool result;
 
 
@@ -184,16 +201,19 @@ bool ApplicationClass::Render()
 	// Disable the Z buffer and enable alpha blending for 2D rendering.
 	m_Direct3D->TurnZBufferOff();
 	m_Direct3D->EnableAlphaBlending();
-	// Each frame we Render the FPS string to the screen.
+	//Render the three mouse strings.
 
-	// Render the fps text string using the font shader.
-	m_FpsString->Render(m_Direct3D->GetDeviceContext());
-
-	result = m_FontShader->Render(m_Direct3D->GetDeviceContext(), m_FpsString->GetIndexCount(), worldMatrix, viewMatrix, orthoMatrix,
-		m_Font->GetTexture(), m_FpsString->GetPixelColor());
-	if (!result)
+	// Render the mouse text strings using the font shader.
+	for (i = 0; i < 3; i++)
 	{
-		return false;
+		m_MouseStrings[i].Render(m_Direct3D->GetDeviceContext());
+
+		result = m_FontShader->Render(m_Direct3D->GetDeviceContext(), m_MouseStrings[i].GetIndexCount(), worldMatrix, viewMatrix, orthoMatrix,
+			m_Font->GetTexture(), m_MouseStrings[i].GetPixelColor());
+		if (!result)
+		{
+			return false;
+		}
 	}
 
 	// Enable the Z buffer and disable alpha blending now that 2D rendering is complete.
@@ -206,74 +226,54 @@ bool ApplicationClass::Render()
 	return true;
 }
 
-// 새로운 UpdateFps 함수는 매 프레임마다 FPS 카운터를 업데이트합니다.
-// 만약 FPS 수치가 이전 프레임과 달라졌다면, 화면에 렌더링되는 FPS 텍스트 문자열도 함께 갱신합니다.
-// 또한 성능 상태에 따라 색상을 설정합니다: 60 FPS 이상은 초록색, 60 미만은 노란색, 30 미만은 빨간색입니다.
-// 일반적으로 이런 함수는 사용자 인터페이스(UI) 전용 클래스에 위치해야 하지만, 
-// 튜토리얼의 단순화를 위해 현재는 ApplicationClass에 추가해 두었습니다.
+//The new UpdateMouseStrings function will update the three mouse strings each frame.
 
-bool ApplicationClass::UpdateFps()
+bool ApplicationClass::UpdateMouseStrings(int mouseX, int mouseY, bool mouseDown)
 {
-	int fps;
-	char tempString[16], finalString[16];
-	float red, green, blue;
+	char tempString[16], finalString[32];
 	bool result;
 
-	// 매 프레임마다 FPS를 업데이트합니다 (내부 카운트 증가 및 1초 체크).
-	m_Fps->Frame();
 
-	// 현재 측정된 FPS 값을 가져옵니다.
-	fps = m_Fps->GetFps();
+	// Convert the mouse X integer to string format.
+	sprintf_s(tempString, "%d", mouseX);
 
-	// 이전 프레임의 FPS와 동일하다면, 텍스트 문자열을 갱신할 필요가 없으므로 그대로 리턴합니다.
-	if (m_previousFps == fps)
-	{
-		return true;
-	}
-
-	// 다음 프레임에서의 확인을 위해 현재 FPS를 저장합니다.
-	m_previousFps = fps;
-
-	// FPS 수치가 100,000을 넘지 않도록 제한합니다 (문자열 버퍼 오버플로우 방지).
-	if (fps > 99999)
-	{
-		fps = 99999;
-	}
-
-	// 정수형 FPS 값을 문자열 형식으로 변환합니다.
-	sprintf_s(tempString, "%d", fps);
-
-	// 출력할 최종 FPS 문자열을 구성합니다. (예: "Fps: 60")
-	strcpy_s(finalString, "Fps: ");
+	// Setup the mouse X string.
+	strcpy_s(finalString, "Mouse X: ");
 	strcat_s(finalString, tempString);
 
-	// 1. FPS가 60 이상이면 텍스트 색상을 초록색으로 설정합니다.
-	if (fps >= 60)
+	// Update the sentence vertex buffer with the new string information.
+	result = m_MouseStrings[0].UpdateText(m_Direct3D->GetDeviceContext(), m_Font, finalString, 10, 10, 1.0f, 1.0f, 1.0f);
+	if (!result)
 	{
-		red = 0.0f;
-		green = 1.0f;
-		blue = 0.0f;
+		return false;
 	}
 
-	// 2. FPS가 60 미만이면 텍스트 색상을 노란색으로 설정합니다.
-	if (fps < 60)
+	// Convert the mouse Y integer to string format.
+	sprintf_s(tempString, "%d", mouseY);
+
+	// Setup the mouse Y string.
+	strcpy_s(finalString, "Mouse Y: ");
+	strcat_s(finalString, tempString);
+
+	// Update the sentence vertex buffer with the new string information.
+	result = m_MouseStrings[1].UpdateText(m_Direct3D->GetDeviceContext(), m_Font, finalString, 10, 35, 1.0f, 1.0f, 1.0f);
+	if (!result)
 	{
-		red = 1.0f;
-		green = 1.0f;
-		blue = 0.0f;
+		return false;
 	}
 
-	// 3. FPS가 30 미만이면 텍스트 색상을 빨간색으로 설정합니다.
-	if (fps < 30)
+	// Setup the mouse button string.
+	if (mouseDown)
 	{
-		red = 1.0f;
-		green = 0.0f;
-		blue = 0.0f;
+		strcpy_s(finalString, "Mouse Button: Yes");
+	}
+	else
+	{
+		strcpy_s(finalString, "Mouse Button: No");
 	}
 
-	// 새로운 문자열 정보와 색상으로 문장의 정점 버퍼를 갱신합니다.
-	// 여기서 이전에 배운 Map/Unmap 로직이 내부적으로 호출됩니다.
-	result = m_FpsString->UpdateText(m_Direct3D->GetDeviceContext(), m_Font, finalString, 10, 10, red, green, blue);
+	// Update the sentence vertex buffer with the new string information.
+	result = m_MouseStrings[2].UpdateText(m_Direct3D->GetDeviceContext(), m_Font, finalString, 10, 60, 1.0f, 1.0f, 1.0f);
 	if (!result)
 	{
 		return false;
