@@ -11,10 +11,9 @@
 ///////////////////////
 #include "D3DClass.h"
 #include "CameraClass.h"
-#include "FontShaderClass.h"
-#include "FontClass.h"
-#include "TextClass.h"
 #include "InputClass.h"
+#include "MultiTextureShaderClass.h"
+#include "ModelClass.h"
 
 
 /////////////
@@ -47,8 +46,7 @@ private:
 private:
     D3DClass* m_Direct3D;
     CameraClass* m_Camera;
-    FontShaderClass* m_FontShader;
-    FontClass* m_Font;
-    TextClass* m_MouseStrings;
+    MultiTextureShaderClass* m_MultiTextureShader;
+    ModelClass* m_Model;
 };
 #endif

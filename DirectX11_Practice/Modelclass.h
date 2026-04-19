@@ -51,45 +51,20 @@ public:
 	
 	// Initialize 함수는 이제 로드할 모델 파일 이름과 텍스처 파일 이름을 입력으로 받습니다.
 	bool Initialize(ID3D11Device*, ID3D11DeviceContext*, char*, char*);
+	bool Initialize(ID3D11Device*, ID3D11DeviceContext*, char*, char*, char*);
 	void Shutdown();
 	void Render(ID3D11DeviceContext*);
 
 	int GetIndexCount();
-
-	/*
-	* ModelClass에 GetTexture 함수가 추가되었습니다.
-	* 이 함수는 모델이 자체적으로 가진 텍스처 리소스(ID3D11ShaderResourceView*)를
-	* 이 모델을 그릴 셰이더에 전달하기 위해 사용됩니다.
-	*
-	* 이전 튜토리얼에서는 모델이 색상만 가지고 있었지만, 이제 텍스처를 사용하기 때문에
-	* 각 모델은 셰이더에게 자신이 사용할 텍스처가 무엇인지 알려주어야 합니다.
-	*
-	* GetTexture 함수는 이러한 역할을 수행하며,
-	* 이를 통해 모델과 텍스처 셰이더 간의 중요한 연결고리 역할을 합니다.
-	*/
-	ID3D11ShaderResourceView* GetTexture();
+	ID3D11ShaderResourceView* GetTexture(int);
 private:
 	bool InitializeBuffers(ID3D11Device*);
 	bool InitializeBuffers_2(ID3D11Device* device);
 	void ShutdownBuffers();
 	void RenderBuffers(ID3D11DeviceContext*);
 
-	/*
-	* ModelClass에는 이제 모델을 렌더링하는 데 사용될 텍스처를
-	* 로드하고 해제하기 위한 비공개(private) 함수인
-	* LoadTexture와 ReleaseTexture가 추가되었습니다.
-	*
-	* LoadTexture 함수는 모델의 Initialize 함수에서 호출되어,
-	* 특정 파일명의 텍스처를 DirectX 장치를 사용하여 메모리에 로드합니다.
-	*
-	* ReleaseTexture 함수는 모델의 Shutdown 함수에서 호출되어,
-	* 로드된 텍스처 리소스를 해제하고 관련 메모리를 정리합니다.
-	*
-	* 이 두 함수는 모델 클래스 내에서 텍스처 리소스 관리를
-	* 캡슐화하여, 외부 코드가 복잡한 리소스 관리 과정에
-	* 관여할 필요가 없게 만듭니다.
-	*/
 	bool LoadTexture(ID3D11Device*, ID3D11DeviceContext*, char*);
+	bool LoadTextures(ID3D11Device*, ID3D11DeviceContext*, char*, char*);
 	void ReleaseTexture();
 
 	// 텍스트 파일에서 모델 데이터를 로드하고 해제하기 위한 새로운 함수들입니다.
@@ -104,7 +79,7 @@ private:
 
 	// m_Texture 변수는 이 모델의 텍스처 리소스를 로드, 해제 및 접근하는 데 사용됩니다.
 	TextureClass* m_Texture;
-
+	TextureClass* m_Textures;
 	// 마지막 변경 사항은 m_model이라는 새로운 private 변수입니다.
 	// 이 변수는 ModelType 구조체 배열로 선언됩니다.
 	// 이 변수는 모델 데이터를 텍스트 파일에서 읽어온 후,

@@ -10,7 +10,7 @@ ModelClass::ModelClass()
 	m_vertexBuffer = 0;
 	m_indexBuffer = 0;
 
-	m_Texture = 0;
+	m_Textures = 0;
 	m_model = 0;
 	m_modelIndices = 0;
 	m_indexCount = 0;
@@ -86,13 +86,13 @@ bool ModelClass::Initialize(ID3D11Device* device, ID3D11DeviceContext* deviceCon
 	// 1. FBX 내장 텍스처가 있으면 그걸 우선 사용
 	if (m_hasEmbeddedTexture)
 	{
-		m_Texture = new TextureClass;
-		if (!m_Texture)
+		m_Textures = new TextureClass;
+		if (!m_Textures)
 			return false;
 
 		if (m_embeddedCompressed)
 		{
-			result = m_Texture->InitializeFromMemory(
+			result = m_Textures->InitializeFromMemory(
 				device,
 				deviceContext,
 				m_embeddedTextureData.data(),
@@ -101,7 +101,7 @@ bool ModelClass::Initialize(ID3D11Device* device, ID3D11DeviceContext* deviceCon
 		}
 		else
 		{
-			result = m_Texture->InitializeFromRawRGBA(
+			result = m_Textures->InitializeFromRawRGBA(
 				device,
 				deviceContext,
 				m_embeddedTextureData.data(),
@@ -124,6 +124,95 @@ bool ModelClass::Initialize(ID3D11Device* device, ID3D11DeviceContext* deviceCon
 	else if (textureFilename)
 	{
 		result = LoadTexture(device, deviceContext, textureFilename);
+		if (!result)
+			return false;
+	}
+
+	return true;
+}
+
+bool ModelClass::Initialize(ID3D11Device* device, ID3D11DeviceContext* deviceContext, char* modelFilename, char* textureFilename1, char* textureFilename2)
+{
+	bool result;
+
+	std::string fileName = modelFilename;
+	std::string ext;
+
+	size_t dotPos = fileName.find_last_of('.');
+	if (dotPos != std::string::npos)
+	{
+		ext = fileName.substr(dotPos);
+		for (char& c : ext)
+			c = static_cast<char>(tolower(c));
+	}
+
+	if (ext == ".txt")
+	{
+		result = LoadModel_2(modelFilename);
+		if (!result)
+			return false;
+
+		result = InitializeBuffers_2(device);
+		if (!result)
+			return false;
+	}
+	else if (ext == ".fbx")
+	{
+		result = LoadModel(modelFilename);
+		if (!result)
+			return false;
+
+		result = InitializeBuffers(device);
+		if (!result)
+			return false;
+	}
+	else
+	{
+		return false;
+	}
+
+
+	// 1. FBX 내장 텍스처가 있으면 그걸 우선 사용
+	if (m_hasEmbeddedTexture)
+	{
+		m_Textures = new TextureClass;
+		if (!m_Textures)
+			return false;
+
+		if (m_embeddedCompressed)
+		{
+			result = m_Textures->InitializeFromMemory(
+				device,
+				deviceContext,
+				m_embeddedTextureData.data(),
+				static_cast<int>(m_embeddedTextureData.size())
+			);
+		}
+		else
+		{
+			result = m_Textures->InitializeFromRawRGBA(
+				device,
+				deviceContext,
+				m_embeddedTextureData.data(),
+				m_embeddedWidth,
+				m_embeddedHeight
+			);
+		}
+
+		if (!result)
+			return false;
+	}
+	// 2. FBX가 외부 텍스처 경로를 가지고 있으면 그걸 사용
+	else if (!m_texturePath.empty())
+	{
+		result = LoadTexture(device, deviceContext, const_cast<char*>(m_texturePath.c_str()));
+		if (!result)
+			return false;
+	}
+	// 3. 아무것도 없으면 기존 인자로 받은 textureFilename 사용
+	else if (textureFilename1 && textureFilename2)
+	{
+		result = LoadTextures(device, deviceContext, textureFilename1, textureFilename2);
 		if (!result)
 			return false;
 	}
@@ -169,9 +258,9 @@ int ModelClass::GetIndexCount()
 * GetTexture는 모델의 텍스처 리소스를 반환하는 새로운 함수입니다.
 * 텍스처 셰이더는 이 모델을 렌더링하기 위해 이 텍스처에 접근해야 합니다.
 */
-ID3D11ShaderResourceView* ModelClass::GetTexture()
+ID3D11ShaderResourceView* ModelClass::GetTexture(int index)
 {
-	return m_Texture->GetTexture();
+	return m_Textures[index].GetTexture();
 }
 
 // InitializeBuffers 함수는 정점 및 인덱스 버퍼를 생성하는 곳입니다.
@@ -387,6 +476,29 @@ void ModelClass::RenderBuffers(ID3D11DeviceContext* deviceContext)
 	return;
 }
 
+bool ModelClass::LoadTextures(ID3D11Device* device, ID3D11DeviceContext* deviceContext, char* filename1, char* filename2)
+{
+	bool result;
+
+
+	// Create and initialize the texture object array.
+	m_Textures = new TextureClass[2];
+
+	result = m_Textures[0].Initialize(device, deviceContext, filename1);
+	if (!result)
+	{
+		return false;
+	}
+
+	result = m_Textures[1].Initialize(device, deviceContext, filename2);
+	if (!result)
+	{
+		return false;
+	}
+
+	return true;
+}
+
 //LoadTexture is a new private function that will create the texture object and then initialize it with the input file name provided.This function is called during initialization.
 bool ModelClass::LoadTexture(ID3D11Device* device, ID3D11DeviceContext* deviceContext, char* filename)
 {
@@ -412,9 +524,18 @@ void ModelClass::ReleaseTexture()
 	// Release the texture object.
 	if (m_Texture)
 	{
-		m_Texture->Shutdown();
-		delete m_Texture;
-		m_Texture = 0;
+		m_Textures->Shutdown();
+		delete m_Textures;
+		m_Textures = 0;
+	}
+
+	if (m_Textures)
+	{
+		m_Textures[0].Shutdown();
+		m_Textures[1].Shutdown();
+
+		delete[] m_Textures;
+		m_Textures = 0;
 	}
 
 	return;
