@@ -78,6 +78,9 @@
     <ClCompile Include="MultiTextureShaderClass.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="LightMapShaderClass.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Systemclass.h">
@@ -137,6 +140,9 @@
     <ClInclude Include="MultiTextureShaderClass.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
+    <ClInclude Include="LightMapShaderClass.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Color.hlsl">
@@ -152,6 +158,9 @@
       <Filter>HLSL</Filter>
     </FxCompile>
     <FxCompile Include="MultiTexture.hlsl">
+      <Filter>HLSL</Filter>
+    </FxCompile>
+    <FxCompile Include="LightMap.hlsl">
       <Filter>HLSL</Filter>
     </FxCompile>
   </ItemGroup>

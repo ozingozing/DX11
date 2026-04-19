@@ -12,7 +12,7 @@
 #include "D3DClass.h"
 #include "CameraClass.h"
 #include "InputClass.h"
-#include "MultiTextureShaderClass.h"
+#include "LightMapShaderClass.h"
 #include "ModelClass.h"
 
 
@@ -41,12 +41,11 @@ public:
 
 private:
     bool Render();
-    bool UpdateMouseStrings(int, int, bool);
 
 private:
     D3DClass* m_Direct3D;
     CameraClass* m_Camera;
-    MultiTextureShaderClass* m_MultiTextureShader;
+    LightMapShaderClass* m_LightMapShader;
     ModelClass* m_Model;
 };
 #endif

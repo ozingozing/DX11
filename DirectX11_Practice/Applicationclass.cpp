@@ -8,7 +8,7 @@ ApplicationClass::ApplicationClass()
 {
 	m_Direct3D = 0;
 	m_Camera = 0;
-	m_MultiTextureShader = 0;
+	m_LightMapShader = 0;
 	m_Model = 0;
 }
 
@@ -48,22 +48,23 @@ bool ApplicationClass::Initialize(int screenWidth, int screenHeight, HWND hwnd)
 	m_Camera->SetPosition(0.0f, 0.0f, -5.0f);
 	m_Camera->Render();
 
-	// Create and initialize the multitexture shader object.
-	m_MultiTextureShader = new MultiTextureShaderClass;
+	// Create and initialize the light map shader object.
+	m_LightMapShader = new LightMapShaderClass;
 
-	result = m_MultiTextureShader->Initialize(m_Direct3D->GetDevice(), hwnd);
+	result = m_LightMapShader->Initialize(m_Direct3D->GetDevice(), hwnd);
 	if (!result)
 	{
-		MessageBox(hwnd, L"Could not initialize the multitexture shader object.", L"Error", MB_OK);
+		MessageBox(hwnd, L"Could not initialize the light map shader object.", L"Error", MB_OK);
 		return false;
 	}
 
 	// Set the file name of the model.
 	strcpy_s(modelFilename, "../Resource/square.txt");
+	// We change the second texture for the model to be the new spotlight light map.
 
 	// Set the file name of the textures.
 	strcpy_s(textureFilename1, "../Resource/stone01.tga");
-	strcpy_s(textureFilename2, "../Resource/dirt01.tga");
+	strcpy_s(textureFilename2, "../Resource/light01.tga");
 
 	// Create and initialize the model object.
 	m_Model = new ModelClass;
@@ -88,12 +89,12 @@ void ApplicationClass::Shutdown()
 		m_Model = 0;
 	}
 
-	// Release the multitexture shader object.
-	if (m_MultiTextureShader)
+	// Release the light map shader object.
+	if (m_LightMapShader)
 	{
-		m_MultiTextureShader->Shutdown();
-		delete m_MultiTextureShader;
-		m_MultiTextureShader = 0;
+		m_LightMapShader->Shutdown();
+		delete m_LightMapShader;
+		m_LightMapShader = 0;
 	}
 
 	// Release the camera object.
@@ -117,26 +118,11 @@ void ApplicationClass::Shutdown()
 
 bool ApplicationClass::Frame(InputClass* Input)
 {
-	int mouseX, mouseY;
-	bool result, mouseDown;
+	bool result;
 	//We now check for the escape key press in this function instead of the SystemClass.
 
 	// Check if the user pressed escape and wants to exit the application.
 	if (Input->IsEscapePressed())
-	{
-		return false;
-	}
-	//Each frame we will now get the mouse location and button status from the Input object and then update the mouse strings.
-
-	// Get the location of the mouse from the input object,
-	Input->GetMouseLocation(mouseX, mouseY);
-
-	// Check if the mouse has been pressed.
-	mouseDown = Input->IsMousePressed();
-
-	// Update the mouse strings each frame.
-	result = UpdateMouseStrings(mouseX, mouseY, mouseDown);
-	if (!result)
 	{
 		return false;
 	}
@@ -167,9 +153,8 @@ bool ApplicationClass::Render()
 	// Render the model using the multitexture shader.
 	m_Model->Render(m_Direct3D->GetDeviceContext());
 
-	result = m_MultiTextureShader->Render(m_Direct3D->GetDeviceContext(), m_Model->GetIndexCount(), worldMatrix, viewMatrix, projectionMatrix,
+	result = m_LightMapShader->Render(m_Direct3D->GetDeviceContext(), m_Model->GetIndexCount(), worldMatrix, viewMatrix, projectionMatrix,
 		m_Model->GetTexture(0), m_Model->GetTexture(1));
-
 	if(!result)
 	{
 		return false;
@@ -177,62 +162,6 @@ bool ApplicationClass::Render()
 
 	// Present the rendered scene to the screen.
 	m_Direct3D->EndScene();
-
-	return true;
-}
-
-//The new UpdateMouseStrings function will update the three mouse strings each frame.
-
-bool ApplicationClass::UpdateMouseStrings(int mouseX, int mouseY, bool mouseDown)
-{
-	//char tempString[16], finalString[32];
-	//bool result;
-
-
-	//// Convert the mouse X integer to string format.
-	//sprintf_s(tempString, "%d", mouseX);
-
-	//// Setup the mouse X string.
-	//strcpy_s(finalString, "Mouse X: ");
-	//strcat_s(finalString, tempString);
-
-	//// Update the sentence vertex buffer with the new string information.
-	//result = m_MouseStrings[0].UpdateText(m_Direct3D->GetDeviceContext(), m_Font, finalString, 10, 10, 1.0f, 1.0f, 1.0f);
-	//if (!result)
-	//{
-	//	return false;
-	//}
-
-	//// Convert the mouse Y integer to string format.
-	//sprintf_s(tempString, "%d", mouseY);
-
-	//// Setup the mouse Y string.
-	//strcpy_s(finalString, "Mouse Y: ");
-	//strcat_s(finalString, tempString);
-
-	//// Update the sentence vertex buffer with the new string information.
-	//result = m_MouseStrings[1].UpdateText(m_Direct3D->GetDeviceContext(), m_Font, finalString, 10, 35, 1.0f, 1.0f, 1.0f);
-	//if (!result)
-	//{
-	//	return false;
-	//}
-
-	//// Setup the mouse button string.
-	//if (mouseDown)
-	//{
-	//	strcpy_s(finalString, "Mouse Button: Yes");
-	//}
-	//else
-	//{
-	//	strcpy_s(finalString, "Mouse Button: No");
-	//}
-
-	//// Update the sentence vertex buffer with the new string information.
-	//result = m_MouseStrings[2].UpdateText(m_Direct3D->GetDeviceContext(), m_Font, finalString, 10, 60, 1.0f, 1.0f, 1.0f);
-	//if (!result)
-	//{
-	//	return false;
-	//}
 
 	return true;
 }
