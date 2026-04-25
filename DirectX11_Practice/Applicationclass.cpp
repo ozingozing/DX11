@@ -8,7 +8,7 @@ ApplicationClass::ApplicationClass()
 {
 	m_Direct3D = 0;
 	m_Camera = 0;
-	m_LightMapShader = 0;
+	m_AlphaMapShader = 0;
 	m_Model = 0;
 }
 
@@ -28,7 +28,7 @@ ApplicationClass::~ApplicationClass()
 // so this model loads in a 3D cube object for rendering.
 bool ApplicationClass::Initialize(int screenWidth, int screenHeight, HWND hwnd)
 {
-	char modelFilename[128], textureFilename1[128], textureFilename2[128];
+	char modelFilename[128], textureFilename1[128], textureFilename2[128], textureFilename3[128];
 	bool result;
 
 
@@ -48,13 +48,15 @@ bool ApplicationClass::Initialize(int screenWidth, int screenHeight, HWND hwnd)
 	m_Camera->SetPosition(0.0f, 0.0f, -5.0f);
 	m_Camera->Render();
 
-	// Create and initialize the light map shader object.
-	m_LightMapShader = new LightMapShaderClass;
+	//We now create and initialize the new AlphaMapShaderClass here.
 
-	result = m_LightMapShader->Initialize(m_Direct3D->GetDevice(), hwnd);
+	// Create and initialize the alpha map shader object.
+	m_AlphaMapShader = new AlphaMapShaderClass;
+
+	result = m_AlphaMapShader->Initialize(m_Direct3D->GetDevice(), hwnd);
 	if (!result)
 	{
-		MessageBox(hwnd, L"Could not initialize the light map shader object.", L"Error", MB_OK);
+		MessageBox(hwnd, L"Could not initialize the alpha map shader object.", L"Error", MB_OK);
 		return false;
 	}
 
@@ -62,14 +64,16 @@ bool ApplicationClass::Initialize(int screenWidth, int screenHeight, HWND hwnd)
 	strcpy_s(modelFilename, "../Resource/square.txt");
 	// We change the second texture for the model to be the new spotlight light map.
 
-	// Set the file name of the textures.
+	  // Set the file name of the textures.
 	strcpy_s(textureFilename1, "../Resource/stone01.tga");
-	strcpy_s(textureFilename2, "../Resource/light01.tga");
+	strcpy_s(textureFilename2, "../Resource/dirt01.tga");
+	strcpy_s(textureFilename3, "../Resource/alpha01.tga");
+
 
 	// Create and initialize the model object.
 	m_Model = new ModelClass;
 
-	result = m_Model->Initialize(m_Direct3D->GetDevice(), m_Direct3D->GetDeviceContext(), modelFilename, textureFilename1, textureFilename2);
+	result = m_Model->Initialize(m_Direct3D->GetDevice(), m_Direct3D->GetDeviceContext(), modelFilename, textureFilename1, textureFilename2, textureFilename3);
 	if (!result)
 	{
 		return false;
@@ -89,12 +93,12 @@ void ApplicationClass::Shutdown()
 		m_Model = 0;
 	}
 
-	// Release the light map shader object.
-	if (m_LightMapShader)
+	// Release the alpha map shader object.
+	if (m_AlphaMapShader)
 	{
-		m_LightMapShader->Shutdown();
-		delete m_LightMapShader;
-		m_LightMapShader = 0;
+		m_AlphaMapShader->Shutdown();
+		delete m_AlphaMapShader;
+		m_AlphaMapShader = 0;
 	}
 
 	// Release the camera object.
@@ -153,12 +157,13 @@ bool ApplicationClass::Render()
 	// Render the model using the multitexture shader.
 	m_Model->Render(m_Direct3D->GetDeviceContext());
 
-	result = m_LightMapShader->Render(m_Direct3D->GetDeviceContext(), m_Model->GetIndexCount(), worldMatrix, viewMatrix, projectionMatrix,
-		m_Model->GetTexture(0), m_Model->GetTexture(1));
-	if(!result)
+	result = m_AlphaMapShader->Render(m_Direct3D->GetDeviceContext(), m_Model->GetIndexCount(), worldMatrix, viewMatrix, projectionMatrix,
+		m_Model->GetTexture(0), m_Model->GetTexture(1), m_Model->GetTexture(2));
+	if (!result)
 	{
 		return false;
 	}
+
 
 	// Present the rendered scene to the screen.
 	m_Direct3D->EndScene();

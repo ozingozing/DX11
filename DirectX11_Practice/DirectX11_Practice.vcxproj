@@ -133,6 +133,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Alphamapshaderclass.cpp" />
     <ClCompile Include="Applicationclass.cpp" />
     <ClCompile Include="BitmapClass.cpp" />
     <ClCompile Include="Cameraclass.cpp" />
@@ -156,6 +157,7 @@
     <ClCompile Include="TimerClass.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Alphamapshaderclass.h" />
     <ClInclude Include="Applicationclass.h" />
     <ClInclude Include="BitmapClass.h" />
     <ClInclude Include="Cameraclass.h" />
@@ -178,6 +180,10 @@
     <ClInclude Include="TimerClass.h" />
   </ItemGroup>
   <ItemGroup>
+    <FxCompile Include="AlphaMap.hlsl">
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">AlphaMapPixelShader</EntryPointName>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+    </FxCompile>
     <FxCompile Include="Color.hlsl">
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">ColorPixelShader</EntryPointName>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>

@@ -52,6 +52,7 @@ public:
 	// Initialize 함수는 이제 로드할 모델 파일 이름과 텍스처 파일 이름을 입력으로 받습니다.
 	bool Initialize(ID3D11Device*, ID3D11DeviceContext*, char*, char*);
 	bool Initialize(ID3D11Device*, ID3D11DeviceContext*, char*, char*, char*);
+	bool Initialize(ID3D11Device*, ID3D11DeviceContext*, char*, char*, char*, char*);
 	void Shutdown();
 	void Render(ID3D11DeviceContext*);
 
@@ -65,6 +66,7 @@ private:
 
 	bool LoadTexture(ID3D11Device*, ID3D11DeviceContext*, char*);
 	bool LoadTextures(ID3D11Device*, ID3D11DeviceContext*, char*, char*);
+	bool LoadTextures(ID3D11Device*, ID3D11DeviceContext*, char*, char*, char*);
 	void ReleaseTexture();
 
 	// 텍스트 파일에서 모델 데이터를 로드하고 해제하기 위한 새로운 함수들입니다.

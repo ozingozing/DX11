@@ -220,6 +220,97 @@ bool ModelClass::Initialize(ID3D11Device* device, ID3D11DeviceContext* deviceCon
 	return true;
 }
 
+
+bool ModelClass::Initialize(ID3D11Device* device, ID3D11DeviceContext* deviceContext, char* modelFilename, char* textureFilename1, char* textureFilename2,
+	char* textureFilename3)
+{
+	bool result;
+
+	std::string fileName = modelFilename;
+	std::string ext;
+
+	size_t dotPos = fileName.find_last_of('.');
+	if (dotPos != std::string::npos)
+	{
+		ext = fileName.substr(dotPos);
+		for (char& c : ext)
+			c = static_cast<char>(tolower(c));
+	}
+
+	if (ext == ".txt")
+	{
+		result = LoadModel_2(modelFilename);
+		if (!result)
+			return false;
+
+		result = InitializeBuffers_2(device);
+		if (!result)
+			return false;
+	}
+	else if (ext == ".fbx")
+	{
+		result = LoadModel(modelFilename);
+		if (!result)
+			return false;
+
+		result = InitializeBuffers(device);
+		if (!result)
+			return false;
+	}
+	else
+	{
+		return false;
+	}
+
+
+	// 1. FBX 내장 텍스처가 있으면 그걸 우선 사용
+	if (m_hasEmbeddedTexture)
+	{
+		m_Textures = new TextureClass;
+		if (!m_Textures)
+			return false;
+
+		if (m_embeddedCompressed)
+		{
+			result = m_Textures->InitializeFromMemory(
+				device,
+				deviceContext,
+				m_embeddedTextureData.data(),
+				static_cast<int>(m_embeddedTextureData.size())
+			);
+		}
+		else
+		{
+			result = m_Textures->InitializeFromRawRGBA(
+				device,
+				deviceContext,
+				m_embeddedTextureData.data(),
+				m_embeddedWidth,
+				m_embeddedHeight
+			);
+		}
+
+		if (!result)
+			return false;
+	}
+	// 2. FBX가 외부 텍스처 경로를 가지고 있으면 그걸 사용
+	else if (!m_texturePath.empty())
+	{
+		result = LoadTexture(device, deviceContext, const_cast<char*>(m_texturePath.c_str()));
+		if (!result)
+			return false;
+	}
+	// 3. 아무것도 없으면 기존 인자로 받은 textureFilename 사용
+	else if (textureFilename1 && textureFilename2 && textureFilename3)
+	{
+		result = LoadTextures(device, deviceContext, textureFilename1, textureFilename2, textureFilename3);
+		if (!result)
+			return false;
+	}
+
+	return true;
+}
+
 // Shutdown 함수는 정점 및 인덱스 버퍼 종료 함수를 호출합니다.
 void ModelClass::Shutdown()
 {
@@ -491,6 +582,35 @@ bool ModelClass::LoadTextures(ID3D11Device* device, ID3D11DeviceContext* deviceC
 	}
 
 	result = m_Textures[1].Initialize(device, deviceContext, filename2);
+	if (!result)
+	{
+		return false;
+	}
+
+	return true;
+}
+
+bool ModelClass::LoadTextures(ID3D11Device* device, ID3D11DeviceContext* deviceContext, char* filename1, char* filename2, char* filename3)
+{
+	bool result;
+
+
+	// Create and initialize the texture object array.
+	m_Textures = new TextureClass[3];
+
+	result = m_Textures[0].Initialize(device, deviceContext, filename1);
+	if (!result)
+	{
+		return false;
+	}
+
+	result = m_Textures[1].Initialize(device, deviceContext, filename2);
+	if (!result)
+	{
+		return false;
+	}
+
+	result = m_Textures[2].Initialize(device, deviceContext, filename3);
 	if (!result)
 	{
 		return false;
