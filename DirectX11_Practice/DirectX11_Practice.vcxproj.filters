@@ -84,6 +84,9 @@
     <ClCompile Include="Alphamapshaderclass.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="Normalmapshaderclass.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Systemclass.h">
@@ -149,6 +152,9 @@
     <ClInclude Include="Alphamapshaderclass.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
+    <ClInclude Include="Normalmapshaderclass.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Color.hlsl">
@@ -170,6 +176,9 @@
       <Filter>HLSL</Filter>
     </FxCompile>
     <FxCompile Include="AlphaMap.hlsl">
+      <Filter>HLSL</Filter>
+    </FxCompile>
+    <FxCompile Include="Normalmap.hlsl">
       <Filter>HLSL</Filter>
     </FxCompile>
   </ItemGroup>

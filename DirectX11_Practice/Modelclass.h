@@ -29,6 +29,8 @@ class ModelClass
 		XMFLOAT3 position;
 		XMFLOAT2 texture;
 		XMFLOAT3 normal;
+		XMFLOAT3 tangent;
+		XMFLOAT3 binormal;
 	};
 
 	// 다음 변경 사항은 모델 파일 형식을 표현하기 위한 새로운 구조체의 추가입니다.
@@ -39,6 +41,21 @@ class ModelClass
 		float x, y, z;   // 위치 좌표
 		float tu, tv;    // 텍스처 좌표
 		float nx, ny, nz;// 법선 벡터
+		float tx, ty, tz;// 탄젠트 벡터
+		float bx, by, bz;// 바이노멀 벡터
+	};
+
+	//다음 두 구조는 탄젠트와 바이노멀을 계산하는 데 사용됩니다.
+	struct TempVertexType
+	{
+		float x, y, z;
+		float tu, tv;
+		float nx, ny, nz;
+	};
+
+	struct VectorType
+	{
+		float x, y, z;
 	};
 
 public:
@@ -73,6 +90,10 @@ private:
 	bool LoadModel(char*);
 	bool LoadModel_2(char* filename);
 	void ReleaseModel();
+
+	//모델의 접선 tangent와 binormal벡터를 계산하는 두 가지 새로운 함수를 추가했습니다.
+	void CalculateModelVectors();
+	void CalculateTangentBinormal(TempVertexType, TempVertexType, TempVertexType, VectorType&, VectorType&);
 private:
 	// ModelClass의 private 변수들은 정점 및 인덱스 버퍼이며, 각 버퍼의 크기를 추적하기 위한 두 개의 정수 변수입니다.
 	// 참고로, 모든 DirectX 11 버퍼는 일반적으로 ID3D11Buffer라는 일반적인 타입을 사용하며, 처음 생성될 때 버퍼 설명(buffer description)에 의해 더 명확하게 식별됩니다.

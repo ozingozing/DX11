@@ -149,6 +149,7 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Modelclass.cpp" />
     <ClCompile Include="MultiTextureShaderClass.cpp" />
+    <ClCompile Include="Normalmapshaderclass.cpp" />
     <ClCompile Include="SpriteClass.cpp" />
     <ClCompile Include="Systemclass.cpp" />
     <ClCompile Include="TextClass.cpp" />
@@ -172,6 +173,7 @@
     <ClInclude Include="LightShaderClass.h" />
     <ClInclude Include="Modelclass.h" />
     <ClInclude Include="MultiTextureShaderClass.h" />
+    <ClInclude Include="Normalmapshaderclass.h" />
     <ClInclude Include="SpriteClass.h" />
     <ClInclude Include="Systemclass.h" />
     <ClInclude Include="TextClass.h" />
@@ -202,6 +204,10 @@
     </FxCompile>
     <FxCompile Include="MultiTexture.hlsl">
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MultiTexturePixelShader</EntryPointName>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+    </FxCompile>
+    <FxCompile Include="Normalmap.hlsl">
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NormalMapPixelShader</EntryPointName>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
     </FxCompile>
     <FxCompile Include="Texture.hlsl">
