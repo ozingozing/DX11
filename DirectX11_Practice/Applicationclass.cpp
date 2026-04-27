@@ -46,7 +46,7 @@ bool ApplicationClass::Initialize(int screenWidth, int screenHeight, HWND hwnd)
 	// Create and initialize the camera object.
 	m_Camera = new CameraClass;
 
-	m_Camera->SetPosition(0.0f, 0.0f, -5.0f);
+	m_Camera->SetPosition(0.0f, 100.0f, -300.0f);
 	m_Camera->Render();
 
 	// Create and initialize the normal map shader object.
@@ -60,7 +60,7 @@ bool ApplicationClass::Initialize(int screenWidth, int screenHeight, HWND hwnd)
 	}
 
 	// Set the file name of the model.
-	strcpy_s(modelFilename, "../Resource/Cube.txt");
+	strcpy_s(modelFilename, "../Resource/Man.fbx");
 	// Set the file name of the textures.
 	strcpy_s(textureFilename1, "../Resource/stone01.tga");
 	strcpy_s(textureFilename2, "../Resource/normal01.tga");

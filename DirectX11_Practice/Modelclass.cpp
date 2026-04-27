@@ -33,287 +33,6 @@ ModelClass::~ModelClass()
 {
 }
 
-// 이제 Initialize 함수는 로드할 모델 파일 이름을
-// 입력으로 받습니다. 그리고 Initialize 함수 내에서
-// 먼저 새로운 LoadModel 함수를 호출합니다.
-// 이 함수는 제공된 파일 이름에서 모델 데이터를
-// 로드하여 새로운 m_model 배열에 저장합니다.
-// 이 모델 배열이 채워지면, 이를 기반으로
-// 정점 버퍼와 인덱스 버퍼를 생성할 수 있습니다.
-// InitializeBuffers 함수는 이제 이 모델 데이터에 의존하므로,
-// 함수들을 올바른 순서로 호출해야 합니다.
-bool ModelClass::Initialize(ID3D11Device* device, ID3D11DeviceContext* deviceContext, char* modelFilename, char* textureFilename)
-{
-	bool result;
-
-	std::string fileName = modelFilename;
-	std::string ext;
-
-	size_t dotPos = fileName.find_last_of('.');
-	if (dotPos != std::string::npos)
-	{
-		ext = fileName.substr(dotPos);
-		for (char& c : ext)
-			c = static_cast<char>(tolower(c));
-	}
-
-	if (ext == ".txt")
-	{
-		result = LoadModel_2(modelFilename);
-		if (!result)
-			return false;
-
-		result = InitializeBuffers_2(device);
-		if (!result)
-			return false;
-	}
-	else if (ext == ".fbx")
-	{
-		result = LoadModel(modelFilename);
-		if (!result)
-			return false;
-
-		result = InitializeBuffers(device);
-		if (!result)
-			return false;
-	}
-	else
-	{
-		return false;
-	}
-
-
-	// 1. FBX 내장 텍스처가 있으면 그걸 우선 사용
-	if (m_hasEmbeddedTexture)
-	{
-		m_Textures = new TextureClass;
-		if (!m_Textures)
-			return false;
-
-		if (m_embeddedCompressed)
-		{
-			result = m_Textures->InitializeFromMemory(
-				device,
-				deviceContext,
-				m_embeddedTextureData.data(),
-				static_cast<int>(m_embeddedTextureData.size())
-			);
-		}
-		else
-		{
-			result = m_Textures->InitializeFromRawRGBA(
-				device,
-				deviceContext,
-				m_embeddedTextureData.data(),
-				m_embeddedWidth,
-				m_embeddedHeight
-			);
-		}
-
-		if (!result)
-			return false;
-	}
-	// 2. FBX가 외부 텍스처 경로를 가지고 있으면 그걸 사용
-	else if (!m_texturePath.empty())
-	{
-		result = LoadTexture(device, deviceContext, const_cast<char*>(m_texturePath.c_str()));
-		if (!result)
-			return false;
-	}
-	// 3. 아무것도 없으면 기존 인자로 받은 textureFilename 사용
-	else if (textureFilename)
-	{
-		result = LoadTexture(device, deviceContext, textureFilename);
-		if (!result)
-			return false;
-	}
-
-	return true;
-}
-
-bool ModelClass::Initialize(ID3D11Device* device, ID3D11DeviceContext* deviceContext, char* modelFilename, char* textureFilename1, char* textureFilename2)
-{
-	bool result;
-
-	std::string fileName = modelFilename;
-	std::string ext;
-
-	size_t dotPos = fileName.find_last_of('.');
-	if (dotPos != std::string::npos)
-	{
-		ext = fileName.substr(dotPos);
-		for (char& c : ext)
-			c = static_cast<char>(tolower(c));
-	}
-
-	if (ext == ".txt")
-	{
-		result = LoadModel_2(modelFilename);
-		if (!result)
-			return false;
-
-		// Calculate the tangent and binormal vectors for the model.
-		CalculateModelVectors();
-
-		result = InitializeBuffers_2(device);
-		if (!result)
-			return false;
-	}
-	else if (ext == ".fbx")
-	{
-		result = LoadModel(modelFilename);
-		if (!result)
-			return false;
-
-		result = InitializeBuffers(device);
-		if (!result)
-			return false;
-	}
-	else
-	{
-		return false;
-	}
-
-
-	// 1. FBX 내장 텍스처가 있으면 그걸 우선 사용
-	if (m_hasEmbeddedTexture)
-	{
-		m_Textures = new TextureClass;
-		if (!m_Textures)
-			return false;
-
-		if (m_embeddedCompressed)
-		{
-			result = m_Textures->InitializeFromMemory(
-				device,
-				deviceContext,
-				m_embeddedTextureData.data(),
-				static_cast<int>(m_embeddedTextureData.size())
-			);
-		}
-		else
-		{
-			result = m_Textures->InitializeFromRawRGBA(
-				device,
-				deviceContext,
-				m_embeddedTextureData.data(),
-				m_embeddedWidth,
-				m_embeddedHeight
-			);
-		}
-
-		if (!result)
-			return false;
-	}
-	// 2. FBX가 외부 텍스처 경로를 가지고 있으면 그걸 사용
-	else if (!m_texturePath.empty())
-	{
-		result = LoadTexture(device, deviceContext, const_cast<char*>(m_texturePath.c_str()));
-		if (!result)
-			return false;
-	}
-	// 3. 아무것도 없으면 기존 인자로 받은 textureFilename 사용
-	else if (textureFilename1 && textureFilename2)
-	{
-		result = LoadTextures(device, deviceContext, textureFilename1, textureFilename2);
-		if (!result)
-			return false;
-	}
-
-	return true;
-}
-
-
-bool ModelClass::Initialize(ID3D11Device* device, ID3D11DeviceContext* deviceContext, char* modelFilename, char* textureFilename1, char* textureFilename2,
-	char* textureFilename3)
-{
-	bool result;
-
-	std::string fileName = modelFilename;
-	std::string ext;
-
-	size_t dotPos = fileName.find_last_of('.');
-	if (dotPos != std::string::npos)
-	{
-		ext = fileName.substr(dotPos);
-		for (char& c : ext)
-			c = static_cast<char>(tolower(c));
-	}
-
-	if (ext == ".txt")
-	{
-		result = LoadModel_2(modelFilename);
-		if (!result)
-			return false;
-
-		result = InitializeBuffers_2(device);
-		if (!result)
-			return false;
-	}
-	else if (ext == ".fbx")
-	{
-		result = LoadModel(modelFilename);
-		if (!result)
-			return false;
-
-		result = InitializeBuffers(device);
-		if (!result)
-			return false;
-	}
-	else
-	{
-		return false;
-	}
-
-
-	// 1. FBX 내장 텍스처가 있으면 그걸 우선 사용
-	if (m_hasEmbeddedTexture)
-	{
-		m_Textures = new TextureClass;
-		if (!m_Textures)
-			return false;
-
-		if (m_embeddedCompressed)
-		{
-			result = m_Textures->InitializeFromMemory(
-				device,
-				deviceContext,
-				m_embeddedTextureData.data(),
-				static_cast<int>(m_embeddedTextureData.size())
-			);
-		}
-		else
-		{
-			result = m_Textures->InitializeFromRawRGBA(
-				device,
-				deviceContext,
-				m_embeddedTextureData.data(),
-				m_embeddedWidth,
-				m_embeddedHeight
-			);
-		}
-
-		if (!result)
-			return false;
-	}
-	// 2. FBX가 외부 텍스처 경로를 가지고 있으면 그걸 사용
-	else if (!m_texturePath.empty())
-	{
-		result = LoadTexture(device, deviceContext, const_cast<char*>(m_texturePath.c_str()));
-		if (!result)
-			return false;
-	}
-	// 3. 아무것도 없으면 기존 인자로 받은 textureFilename 사용
-	else if (textureFilename1 && textureFilename2 && textureFilename3)
-	{
-		result = LoadTextures(device, deviceContext, textureFilename1, textureFilename2, textureFilename3);
-		if (!result)
-			return false;
-	}
-
-	return true;
-}
-
 // Shutdown 함수는 정점 및 인덱스 버퍼 종료 함수를 호출합니다.
 void ModelClass::Shutdown()
 {
@@ -357,10 +76,95 @@ ID3D11ShaderResourceView* ModelClass::GetTexture(int index)
 	return m_Textures[index].GetTexture();
 }
 
+bool ModelClass::InitializeModel(ID3D11Device* device, ID3D11DeviceContext* deviceContext, char* modelFilename)
+{
+	bool result;
+
+	std::string fileName = modelFilename;
+	std::string ext;
+
+	size_t dotPos = fileName.find_last_of('.');
+	if (dotPos != std::string::npos)
+	{
+		ext = fileName.substr(dotPos);
+		for (char& c : ext)
+			c = static_cast<char>(tolower(c));
+	}
+
+	if (ext == ".txt")
+	{
+		result = LoadModel_txt(modelFilename);
+		if (!result)
+			return false;
+
+		// Calculate the tangent and binormal vectors for the model.
+		CalculateModelVectors();
+
+		result = InitializeBuffers_txt(device);
+		if (!result)
+			return false;
+	}
+	else if (ext == ".fbx")
+	{
+		result = LoadModel_fbx(modelFilename);
+		if (!result)
+			return false;
+
+		result = InitializeBuffers_fbx(device);
+		if (!result)
+			return false;
+	}
+	else
+	{
+		return false;
+	}
+}
+
+bool ModelClass::ProcessTextures(ID3D11Device* device, ID3D11DeviceContext* deviceContext, const std::vector<char*>& filenames)
+{
+	bool result;
+
+	int textureCount = static_cast<int>(m_tempTextureList.size());
+	if (textureCount > 0)
+	{
+		m_Textures = new TextureClass[textureCount];
+
+		for (int i = 0; i < textureCount; i++)
+		{
+			auto& data = m_tempTextureList[i];
+			if (data.isEmbedded) {
+				if (data.isCompressed) {
+					m_Textures[i].InitializeFromMemory(device, deviceContext, data.data.data(), static_cast<int>(data.data.size()));
+				}
+				else {
+					m_Textures[i].InitializeFromRawRGBA(device, deviceContext, data.data.data(), data.width, data.height);
+				}
+			}
+			else {
+				// 경로를 이용한 외부 파일 로드
+				m_Textures[i].Initialize(device, deviceContext, const_cast<char*>(data.path.c_str()));
+			}
+		}
+	}
+	else if (!filenames.empty())
+	{
+		m_textureCount = static_cast<int>(filenames.size());
+		m_Textures = new TextureClass[m_textureCount];
+
+		for (int i = 0; i < m_textureCount; i++)
+		{
+			result = m_Textures[i].Initialize(device, deviceContext, filenames[i]);
+			if (!result) return false;
+		}
+	}
+
+	return true;
+}
+
 // InitializeBuffers 함수는 정점 및 인덱스 버퍼를 생성하는 곳입니다.
 // 일반적으로는 모델 파일에서 데이터를 읽어와 버퍼를 생성하지만,
 // 이 튜토리얼에서는 단일 삼각형이므로 정점 및 인덱스 데이터를 수동으로 설정합니다.
-bool ModelClass::InitializeBuffers(ID3D11Device* device)
+bool ModelClass::InitializeBuffers_fbx(ID3D11Device* device)
 {
 	VertexType* vertices;
 	unsigned long* indices;
@@ -442,7 +246,7 @@ bool ModelClass::InitializeBuffers(ID3D11Device* device)
 	return true;
 }
 
-bool ModelClass::InitializeBuffers_2(ID3D11Device* device)
+bool ModelClass::InitializeBuffers_txt(ID3D11Device* device)
 {
 	VertexType* vertices;
 	unsigned long* indices;
@@ -572,77 +376,6 @@ void ModelClass::RenderBuffers(ID3D11DeviceContext* deviceContext)
 	return;
 }
 
-bool ModelClass::LoadTextures(ID3D11Device* device, ID3D11DeviceContext* deviceContext, char* filename1, char* filename2)
-{
-	bool result;
-
-
-	// Create and initialize the texture object array.
-	m_Textures = new TextureClass[2];
-
-	result = m_Textures[0].Initialize(device, deviceContext, filename1);
-	if (!result)
-	{
-		return false;
-	}
-
-	result = m_Textures[1].Initialize(device, deviceContext, filename2);
-	if (!result)
-	{
-		return false;
-	}
-
-	return true;
-}
-
-bool ModelClass::LoadTextures(ID3D11Device* device, ID3D11DeviceContext* deviceContext, char* filename1, char* filename2, char* filename3)
-{
-	bool result;
-
-
-	// Create and initialize the texture object array.
-	m_Textures = new TextureClass[3];
-
-	result = m_Textures[0].Initialize(device, deviceContext, filename1);
-	if (!result)
-	{
-		return false;
-	}
-
-	result = m_Textures[1].Initialize(device, deviceContext, filename2);
-	if (!result)
-	{
-		return false;
-	}
-
-	result = m_Textures[2].Initialize(device, deviceContext, filename3);
-	if (!result)
-	{
-		return false;
-	}
-
-	return true;
-}
-
-//LoadTexture is a new private function that will create the texture object and then initialize it with the input file name provided.This function is called during initialization.
-bool ModelClass::LoadTexture(ID3D11Device* device, ID3D11DeviceContext* deviceContext, char* filename)
-{
-	bool result;
-
-
-	// Create and initialize the texture object.
-	m_Texture = new TextureClass;
-
-	result = m_Texture->Initialize(device, deviceContext, filename);
-	if (!result)
-	{
-		return false;
-	}
-
-	return true;
-}
-
-
 //The ReleaseTexture function will release the texture object that was created and loaded during the LoadTexture function.
 void ModelClass::ReleaseTexture()
 {
@@ -673,7 +406,7 @@ void ModelClass::ReleaseTexture()
 // 정점 개수를 읽어온 후에는 ModelType 배열을 생성하고
 // 각 행을 배열에 읽어들입니다.
 // 이제 이 함수에서 정점 개수와 인덱스 개수가 모두 설정됩니다.
-bool ModelClass::LoadModel(char* filename)
+bool ModelClass::LoadModel_fbx(char* filename)
 {
 	Assimp::Importer importer;
 	const aiScene* pScene = importer.ReadFile(filename,
@@ -698,7 +431,7 @@ bool ModelClass::LoadModel(char* filename)
 
 	// 3. m_model 배열 할당
 	m_model = new ModelType[m_vertexCount];
-	if(!m_model) return false;
+	if (!m_model) return false;
 
 	m_modelIndices = new unsigned long[m_indexCount];
 	if (!m_modelIndices) return false;
@@ -736,13 +469,25 @@ bool ModelClass::LoadModel(char* filename)
 			m_model[i].ny = 0.0f;
 			m_model[i].nz = 0.0f;
 		}
+
+		// Tangent과 Bitangent 확인
+		if (mesh->HasTangentsAndBitangents())
+		{
+			m_model[i].tx = mesh->mTangents[i].x;
+			m_model[i].ty = mesh->mTangents[i].y;
+			m_model[i].tz = mesh->mTangents[i].z;
+
+			m_model[i].bx = mesh->mBitangents[i].x;
+			m_model[i].by = mesh->mBitangents[i].y;
+			m_model[i].bz = mesh->mBitangents[i].z;
+		}
 	}
 
 	//실제 face 인덱스 복사
 	unsigned int indexOffset = 0;
-	for(unsigned int f = 0; f < mesh->mNumFaces; f++) {
+	for (unsigned int f = 0; f < mesh->mNumFaces; f++) {
 		const aiFace& face = mesh->mFaces[f];
-		
+
 		if (face.mNumIndices != 3) continue;
 
 		m_modelIndices[indexOffset++] = face.mIndices[0];
@@ -752,104 +497,62 @@ bool ModelClass::LoadModel(char* filename)
 
 	m_indexCount = indexOffset; // 실제로 복사된 인덱스 수로 업데이트
 
-	// disffuse 텍스처 경로 찾기
-	aiString texPath;
-	if( material->GetTextureCount(aiTextureType_DIFFUSE) > 0 &&
-		material->GetTexture(aiTextureType_DIFFUSE, 0, &texPath) == AI_SUCCESS) {
-		// 이 texPath는 embedded texture일 수도 있음
-		const aiTexture* embeddedTex = pScene->GetEmbeddedTexture(texPath.C_Str());
-		
-		if (embeddedTex)
+	// --- 텍스처 처리 로직 시작 ---
+
+	// 로드하고자 하는 텍스처 타입들을 정의합니다.
+	aiTextureType types[] = {
+		aiTextureType_DIFFUSE,
+		aiTextureType_NORMALS
+	};
+	// 임시로 데이터를 담을 vector (Initialize에서 사용할 용도)
+	m_tempTextureList.clear();
+
+	for (auto type : types)
+	{
+		if (material->GetTextureCount(type) > 0)
 		{
-			m_hasEmbeddedTexture = true;
-
-			// FBX 안에 텍스처가 "내장(embedded)" 되어 있는 경우의 처리 분기
-			// Assimp의 aiTexture는 두 가지 형태로 들어올 수 있습니다.
-			//
-			// 1) mHeight == 0
-			//    - PNG, JPG 같은 "압축된 이미지 파일 바이트" 자체가 들어 있는 경우
-			//    - 이때 mWidth는 이미지의 가로 길이가 아니라 "전체 바이트 크기"를 의미합니다.
-			//
-			// 2) mHeight > 0
-			//    - 이미 압축이 풀린 RGBA texel 배열이 들어 있는 경우
-			//    - 이때 mWidth, mHeight는 실제 이미지 너비/높이입니다.
-
-			// case 1: PNG/JPG 같은 압축 이미지 바이트
-			if (embeddedTex->mHeight == 0)
+			aiString texPath;
+			if (material->GetTexture(type, 0, &texPath) == AI_SUCCESS)
 			{
-				// 이 텍스처는 압축된 이미지 데이터라는 표시
-				// 나중에 TextureClass에서 stbi_load_from_memory 같은 함수로 디코딩할 때 사용
-				m_embeddedCompressed = true;
+				TempTextureData tempData;
+				const aiTexture* embeddedTex = pScene->GetEmbeddedTexture(texPath.C_Str());
 
-				// 이 경우 mWidth는 "이미지 가로 크기"가 아니라
-				// embedded texture 데이터의 전체 바이트 크기입니다.
-				m_embeddedWidth = embeddedTex->mWidth;
-
-				// 압축 바이트 데이터이므로 실제 높이 정보는 여기서 의미가 없습니다.
-				// 구분용으로 0을 저장해 둡니다.
-				m_embeddedHeight = 0;
-
-				// Assimp가 들고 있는 내장 텍스처의 원본 바이트 시작 주소를 가져옵니다.
-				// pcData는 void 성격의 데이터이므로 unsigned char 포인터로 변환해서 사용합니다.
-				const unsigned char* src =
-					reinterpret_cast<const unsigned char*>(embeddedTex->pcData);
-
-				// Assimp 내부 메모리를 그대로 참조하지 않고,
-				// 우리 클래스의 vector에 "복사"해서 보관합니다.
-				//
-				// 이렇게 해야 LoadModel 함수가 끝난 뒤 Importer/Scene이 소멸해도
-				// 텍스처 데이터가 안전하게 유지됩니다.
-				//
-				// 범위:
-				//   src ~ src + embeddedTex->mWidth
-				// → 압축 이미지 파일 전체 바이트 수만큼 복사
-				m_embeddedTextureData.assign(src, src + embeddedTex->mWidth);
+				if (embeddedTex)
+				{
+					tempData.isEmbedded = true;
+					if (embeddedTex->mHeight == 0)
+					{
+						tempData.isCompressed = true;
+						tempData.width = embeddedTex->mWidth; // 전체 바이트 크기
+						tempData.height = 0; // 구분용
+						const unsigned char* src = reinterpret_cast<const unsigned char*>(embeddedTex->pcData);
+						tempData.data.assign(src, src + embeddedTex->mWidth);
+					}
+					else
+					{
+						tempData.isCompressed = false;
+						tempData.width = embeddedTex->mWidth;
+						tempData.height = embeddedTex->mHeight;
+						size_t texelCount = static_cast<size_t>(embeddedTex->mWidth) * static_cast<size_t>(embeddedTex->mHeight);
+						size_t byteSize = texelCount * 4; // RGBA8888
+						const unsigned char* src = reinterpret_cast<const unsigned char*>(embeddedTex->pcData);
+						tempData.data.assign(src, src + byteSize);
+					}
+				}
+				else
+				{
+					tempData.isEmbedded = false;
+					tempData.path = texPath.C_Str();
+				}
+				m_tempTextureList.push_back(tempData);
 			}
-			// case 2: RGBA texel 배열
-			else
-			{
-				// 이 텍스처는 압축 파일 바이트가 아니라
-				// 이미 풀려 있는 RGBA 픽셀 배열이라는 표시
-				m_embeddedCompressed = false;
-
-				// 실제 이미지 너비 저장
-				m_embeddedWidth = embeddedTex->mWidth;
-
-				// 실제 이미지 높이 저장
-				m_embeddedHeight = embeddedTex->mHeight;
-
-				// 전체 픽셀 개수 = 가로 * 세로
-				size_t texelCount = static_cast<size_t>(embeddedTex->mWidth) *
-					static_cast<size_t>(embeddedTex->mHeight);
-
-				// aiTexel은 보통 픽셀 1개당 4바이트(RGBA)로 취급하므로
-				// 전체 바이트 수 = 픽셀 수 * 4
-				size_t byteSize = texelCount * 4; // RGBA8888
-
-				// Assimp가 가진 raw texel 데이터 시작 주소를 가져옵니다.
-				const unsigned char* src =
-					reinterpret_cast<const unsigned char*>(embeddedTex->pcData);
-
-				// raw RGBA 픽셀 데이터를 우리 쪽 vector에 복사합니다.
-				//
-				// 이것도 역시 Assimp 내부 메모리를 직접 참조하지 않기 위해서입니다.
-				// 이후 TextureClass에서 이 바이트 배열을 사용해
-				// DirectX Texture2D를 생성할 수 있습니다.
-				m_embeddedTextureData.assign(src, src + byteSize);
-			}
-		}
-		else
-		{
-			// 외부 파일 경로 저장
-			m_texturePath = texPath.C_Str();
-			m_hasEmbeddedTexture = false;
 		}
 	}
 
 	return true;
 }
 
-bool ModelClass::LoadModel_2(char* filename)
+bool ModelClass::LoadModel_txt(char* filename)
 {
 	ifstream fin;
 	char input;
@@ -876,6 +579,8 @@ bool ModelClass::LoadModel_2(char* filename)
 
 	// Set the number of indices to be the same as the vertex count.
 	m_indexCount = m_vertexCount;
+	m_modelIndices = new unsigned long[m_indexCount];
+	if (!m_modelIndices) return false;
 
 	// Create the model using the vertex count that was read in.
 	m_model = new ModelType[m_vertexCount];
