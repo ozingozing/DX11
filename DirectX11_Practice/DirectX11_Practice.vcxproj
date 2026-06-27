@@ -150,6 +150,7 @@
     <ClCompile Include="Modelclass.cpp" />
     <ClCompile Include="MultiTextureShaderClass.cpp" />
     <ClCompile Include="Normalmapshaderclass.cpp" />
+    <ClCompile Include="ShaderManagerClass.cpp" />
     <ClCompile Include="SpecMapShaderClass.cpp" />
     <ClCompile Include="SpriteClass.cpp" />
     <ClCompile Include="Systemclass.cpp" />
@@ -175,6 +176,7 @@
     <ClInclude Include="Modelclass.h" />
     <ClInclude Include="MultiTextureShaderClass.h" />
     <ClInclude Include="Normalmapshaderclass.h" />
+    <ClInclude Include="ShaderManagerClass.h" />
     <ClInclude Include="SpecMapShaderClass.h" />
     <ClInclude Include="SpriteClass.h" />
     <ClInclude Include="Systemclass.h" />

@@ -8,9 +8,7 @@ LightShaderClass::LightShaderClass()
     m_layout = 0;
     m_sampleState = 0;
     m_matrixBuffer = 0;
-
-    m_lightColorBuffer = 0;
-    m_lightPositionBuffer = 0;
+    m_lightBuffer = 0;
 }
 
 
@@ -68,14 +66,28 @@ void LightShaderClass::Shutdown()
 
 // Render 함수는 이제 조명 방향(light direction)과 조명 확산색(diffuse color)을 입력으로 받습니다.
 // 이 변수들은 SetShaderParameters 함수로 전달되어 최종적으로 셰이더 내부에서 설정됩니다.
-bool LightShaderClass::Render(ID3D11DeviceContext* deviceContext, int indexCount, XMMATRIX worldMatrix, XMMATRIX viewMatrix, XMMATRIX projectionMatrix,
-    ID3D11ShaderResourceView* texture, XMFLOAT4 diffuseColor[], XMFLOAT4 lightPosition[])
+bool LightShaderClass::Render(
+    ID3D11DeviceContext* deviceContext,
+    int indexCount,
+    XMMATRIX worldMatrix,
+    XMMATRIX viewMatrix,
+    XMMATRIX projectionMatrix,
+    ID3D11ShaderResourceView* texture,
+    XMFLOAT3 lightDirection,
+    XMFLOAT4 diffuseColor)
 {
     bool result;
 
 
     // 렌더링에 사용할 셰이더 매개변수를 설정합니다.
-    result = SetShaderParameters(deviceContext, worldMatrix, viewMatrix, projectionMatrix, texture, diffuseColor, lightPosition);
+    result = SetShaderParameters(
+        deviceContext,
+        worldMatrix,
+        viewMatrix,
+        projectionMatrix,
+        texture,
+        lightDirection,
+        diffuseColor);
     if (!result)
     {
         return false;
@@ -251,29 +263,14 @@ bool LightShaderClass::InitializeShader(ID3D11Device* device, HWND hwnd, WCHAR* 
 
     // Setup the description of the dytnamic constant buffer that is in the pixel shader
 	lightColorBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-	lightColorBufferDesc.ByteWidth = sizeof(LightColorBufferType);
+	lightColorBufferDesc.ByteWidth = sizeof(LightBufferType);
 	lightColorBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 	lightColorBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 	lightColorBufferDesc.MiscFlags = 0;
 	lightColorBufferDesc.StructureByteStride = 0;
 
     // Create the constant buffer pointer so we can access the pixel shader constant buffer from within this class
-	result = device->CreateBuffer(&lightColorBufferDesc, NULL, &m_lightColorBuffer);
-    if (FAILED(result))
-    {
-        return false;
-    }
-
-    // Setup the description of the dynamic constant buffer that is in the vertex shader.
-    lightPositionBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-    lightPositionBufferDesc.ByteWidth = sizeof(LightPositionBufferType);
-    lightPositionBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-    lightPositionBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-    lightPositionBufferDesc.MiscFlags = 0;
-    lightPositionBufferDesc.StructureByteStride = 0;
-
-    // Create the constant buffer pointer so we can access the vertex shader constant buffer from within this class.
-    result = device->CreateBuffer(&lightPositionBufferDesc, NULL, &m_lightPositionBuffer);
+	result = device->CreateBuffer(&lightColorBufferDesc, NULL, &m_lightBuffer);
     if (FAILED(result))
     {
         return false;
@@ -285,48 +282,42 @@ bool LightShaderClass::InitializeShader(ID3D11Device* device, HWND hwnd, WCHAR* 
 
 void LightShaderClass::ShutdownShader()
 {
-    // Release the light constant buffers.
-    if (m_lightColorBuffer)
+    // Release the light constant buffer.
+    if (m_lightBuffer)
     {
-        m_lightColorBuffer->Release();
-        m_lightColorBuffer = 0;
+        m_lightBuffer->Release();
+        m_lightBuffer = 0;
     }
 
-    if (m_lightPositionBuffer)
-    {
-        m_lightPositionBuffer->Release();
-        m_lightPositionBuffer = 0;
-    }
-
-    // 행렬 상수 버퍼를 해제합니다.
+    // Release the matrix constant buffer.
     if (m_matrixBuffer)
     {
         m_matrixBuffer->Release();
         m_matrixBuffer = 0;
     }
 
-    // 샘플러 상태를 해제합니다.
+    // Release the sampler state.
     if (m_sampleState)
     {
         m_sampleState->Release();
         m_sampleState = 0;
     }
 
-    // 레이아웃을 해제합니다.
+    // Release the layout.
     if (m_layout)
     {
         m_layout->Release();
         m_layout = 0;
     }
 
-    // 픽셀 셰이더를 해제합니다.
+    // Release the pixel shader.
     if (m_pixelShader)
     {
         m_pixelShader->Release();
         m_pixelShader = 0;
     }
 
-    // 정점 셰이더를 해제합니다.
+    // Release the vertex shader.
     if (m_vertexShader)
     {
         m_vertexShader->Release();
@@ -374,96 +365,70 @@ void LightShaderClass::OutputShaderErrorMessage(ID3D10Blob* errorMessage, HWND h
 
 // SetShaderParameters 함수는 이제 lightDirection과 diffuseColor를 입력으로 받습니다.
 bool LightShaderClass::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMMATRIX worldMatrix, XMMATRIX viewMatrix, XMMATRIX projectionMatrix,
-    ID3D11ShaderResourceView* texture, XMFLOAT4 diffuseColor[], XMFLOAT4 lightPosition[])
+    ID3D11ShaderResourceView* texture, XMFLOAT3 lightDirection, XMFLOAT4 diffuseColor)
 {
     HRESULT result;
     D3D11_MAPPED_SUBRESOURCE mappedResource;
     unsigned int bufferNumber;
     MatrixBufferType* dataPtr;
-    LightPositionBufferType* dataPtr2;
-    LightColorBufferType* dataPtr3;
+    LightBufferType* dataPtr2;
 
-    // 행렬을 셰이더에서 사용할 수 있도록 전치(Transpose)합니다.
+
+    // Transpose the matrices to prepare them for the shader.
     worldMatrix = XMMatrixTranspose(worldMatrix);
     viewMatrix = XMMatrixTranspose(viewMatrix);
     projectionMatrix = XMMatrixTranspose(projectionMatrix);
 
-    // 상수 버퍼를 쓸 수 있도록 잠급니다(Lock).
+    // Lock the constant buffer so it can be written to.
     result = deviceContext->Map(m_matrixBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
     if (FAILED(result))
     {
         return false;
     }
 
-    // 상수 버퍼 데이터에 대한 포인터를 얻습니다.
+    // Get a pointer to the data in the constant buffer.
     dataPtr = (MatrixBufferType*)mappedResource.pData;
 
-    // 행렬을 상수 버퍼로 복사합니다.
+    // Copy the matrices into the constant buffer.
     dataPtr->world = worldMatrix;
     dataPtr->view = viewMatrix;
     dataPtr->projection = projectionMatrix;
 
-    // 상수 버퍼의 잠금을 해제합니다(Unlock).
+    // Unlock the constant buffer.
     deviceContext->Unmap(m_matrixBuffer, 0);
 
-    // 정점 셰이더 내에서 상수 버퍼의 위치를 설정합니다.
+    // Set the position of the constant buffer in the vertex shader.
     bufferNumber = 0;
 
-    // 이제 정점 셰이더의 상수 버퍼를 업데이트된 값들로 설정합니다.
+    // Now set the constant buffer in the vertex shader with the updated values.
     deviceContext->VSSetConstantBuffers(bufferNumber, 1, &m_matrixBuffer);
 
-    // 쓰기 작업이 가능하도록 조명 위치 상수 버퍼를 잠급니다.
-    result = deviceContext->Map(m_lightPositionBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-    if (FAILED(result))
-    {
-        return false;
-    }
-
-    // 상수 버퍼에 있는 데이터에 대한 포인터를 가져옵니다.
-    dataPtr2 = (LightPositionBufferType*)mappedResource.pData;
-
-    // 광원 위치 변수를 상수 버퍼에 복사합니다.
-    dataPtr2->lightPosition[0] = lightPosition[0];
-    dataPtr2->lightPosition[1] = lightPosition[1];
-    dataPtr2->lightPosition[2] = lightPosition[2];
-    dataPtr2->lightPosition[3] = lightPosition[3];
-
-    // 상수 버퍼의 잠금을 해제합니다.
-    deviceContext->Unmap(m_lightPositionBuffer, 0);
-
-    // 정점 셰이더에서 상수 버퍼의 위치를 ​​설정합니다.
-    bufferNumber = 1;
-
-    // 마지막으로, 정점 셰이더의 상수 버퍼를 업데이트된 값으로 설정합니다.
-    deviceContext->VSSetConstantBuffers(bufferNumber, 1, &m_lightPositionBuffer);
-
-    // 픽셀 셰이더에서 셰이더 텍스처 리소스를 설정합니다.
+    // Set shader texture resource in the pixel shader.
     deviceContext->PSSetShaderResources(0, 1, &texture);
 
-    // Lock the light color constant buffer so it can be written to.
-    result = deviceContext->Map(m_lightColorBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+    // Lock the light constant buffer so it can be written to.
+    result = deviceContext->Map(m_lightBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
     if (FAILED(result))
     {
         return false;
     }
 
     // Get a pointer to the data in the constant buffer.
-    dataPtr3 = (LightColorBufferType*)mappedResource.pData;
+    dataPtr2 = (LightBufferType*)mappedResource.pData;
 
-    // Copy the light color variables into the constant buffer.
-    dataPtr3->diffuseColor[0] = diffuseColor[0];
-    dataPtr3->diffuseColor[1] = diffuseColor[1];
-    dataPtr3->diffuseColor[2] = diffuseColor[2];
-    dataPtr3->diffuseColor[3] = diffuseColor[3];
+    // Copy the lighting variables into the constant buffer.
+    dataPtr2->diffuseColor = diffuseColor;
+    dataPtr2->lightDirection = lightDirection;
+    dataPtr2->padding = 0.0f;
 
     // Unlock the constant buffer.
-    deviceContext->Unmap(m_lightColorBuffer, 0);
+    deviceContext->Unmap(m_lightBuffer, 0);
 
-    // Set the position of the constant buffer in the pixel shader.
-    bufferNumber = 2;
+    // Set the position of the light constant buffer in the pixel shader.
+    bufferNumber = 1;
 
-    // Finally set the constant buffer in the pixel shader with the updated values.
-    deviceContext->PSSetConstantBuffers(bufferNumber, 1, &m_lightColorBuffer);
+    // Finally set the light constant buffer in the pixel shader with the updated values.
+    deviceContext->PSSetConstantBuffers(bufferNumber, 1, &m_lightBuffer);
 
     return true;
 }

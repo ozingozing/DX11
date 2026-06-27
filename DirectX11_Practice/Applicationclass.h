@@ -12,9 +12,9 @@
 #include "D3DClass.h"
 #include "CameraClass.h"
 #include "InputClass.h"
-#include "SpecMapShaderClass.h"
 #include "modelclass.h"
 #include "lightclass.h"
+#include "ShaderManagerClass.h"
 
 
 /////////////
@@ -46,8 +46,8 @@ private:
 private:
     D3DClass* m_Direct3D;
     CameraClass* m_Camera;
-    SpecMapShaderClass* m_SpecMapShader;
     ModelClass* m_Model;
     LightClass* m_Light;
+    ShaderManagerClass* m_ShaderManager;
 };
 #endif
