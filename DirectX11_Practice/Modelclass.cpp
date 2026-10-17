@@ -7,6 +7,8 @@
 // 클래스 생성자는 정점 및 인덱스 버퍼 포인터를 null로 초기화합니다.
 ModelClass::ModelClass()
 {
+	textureCount = 0;
+
 	m_vertexBuffer = 0;
 	m_indexBuffer = 0;
 
@@ -76,6 +78,11 @@ ID3D11ShaderResourceView* ModelClass::GetTexture(int index)
 	return m_Textures[index].GetTexture();
 }
 
+ID3D11ShaderResourceView* ModelClass::GetTexture()
+{
+	return m_Textures[0].GetTexture();
+}
+
 bool ModelClass::InitializeModel(ID3D11Device* device, ID3D11DeviceContext* deviceContext, char* modelFilename)
 {
 	bool result;
@@ -104,7 +111,7 @@ bool ModelClass::InitializeModel(ID3D11Device* device, ID3D11DeviceContext* devi
 		if (!result)
 			return false;
 	}
-	else if (ext == ".fbx")
+	else if (ext == ".fbx" || ext == ".obj")
 	{
 		result = LoadModel_fbx(modelFilename);
 		if (!result)
@@ -124,7 +131,7 @@ bool ModelClass::ProcessTextures(ID3D11Device* device, ID3D11DeviceContext* devi
 {
 	bool result;
 
-	int textureCount = static_cast<int>(m_tempTextureList.size());
+	textureCount = static_cast<int>(m_tempTextureList.size());
 	if (textureCount > 0)
 	{
 		m_Textures = new TextureClass[textureCount];
@@ -387,13 +394,15 @@ void ModelClass::ReleaseTexture()
 		m_Textures = 0;
 	}
 
-	if (m_Textures)
+	if(textureCount > 0 && m_Textures)
 	{
-		m_Textures[0].Shutdown();
-		m_Textures[1].Shutdown();
-
+		for (int i = 0; i < textureCount; i++)
+		{
+			m_Textures[i].Shutdown();
+		}
 		delete[] m_Textures;
-		m_Textures = 0;
+		m_Textures = nullptr;
+		textureCount = 0;
 	}
 
 	return;

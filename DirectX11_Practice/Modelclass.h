@@ -95,6 +95,7 @@ public:
 
 	int GetIndexCount();
 	ID3D11ShaderResourceView* GetTexture(int);
+	ID3D11ShaderResourceView* GetTexture();
 private:
 	// 내부 모델 로드 로직 (기존 Initialize의 앞부분)
 	bool InitializeModel(ID3D11Device* device, ID3D11DeviceContext* deviceContext, char* modelFilename);
@@ -135,6 +136,7 @@ private:
 	unsigned long* m_modelIndices;
 
 private:
+	int textureCount;
 	vector<TempTextureData> m_tempTextureList;
 	std::string m_texturePath;
 	bool m_hasEmbeddedTexture;

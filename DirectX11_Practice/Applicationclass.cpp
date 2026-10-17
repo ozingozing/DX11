@@ -52,7 +52,7 @@ bool ApplicationClass::Initialize(int screenWidth, int screenHeight, HWND hwnd)
 	m_Camera->GetViewMatrix(m_baseViewMatrix);
 
 	// Set the file name of the model.
-	strcpy_s(modelFilename, "../Resource/sphere.txt");
+	strcpy_s(modelFilename, "../Resource/cube.obj");
 	// Set the file name of the textures.
 	strcpy_s(textureFilename1, "../Resource/stone01.tga");
 
@@ -70,7 +70,7 @@ bool ApplicationClass::Initialize(int screenWidth, int screenHeight, HWND hwnd)
 	m_Light = new LightClass;
 
 	m_Light->SetDiffuseColor(1.0f, 1.0f, 1.0f, 1.0f);
-	m_Light->SetDirection(0.0f, 0.0f, 1.0f);
+	m_Light->SetDirection(0.0f, 1.0f, 1.0f);
 
 	// Create and initialize the light shader object.
 	m_LightShader = new LightShaderClass;
