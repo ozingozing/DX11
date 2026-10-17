@@ -232,6 +232,26 @@ bool InputClass::IsEscapePressed()
     return false;
 }
 
+bool InputClass::IsLeftArrowPressed()
+{
+    if (m_keyboardState[DIK_LEFT] & 0x80)
+    {
+        return true;
+    }
+
+    return false;
+}
+
+bool InputClass::IsRightArrowPressed()
+{
+    if (m_keyboardState[DIK_RIGHT] & 0x80)
+    {
+        return true;
+    }
+
+    return false;
+}
+
 // 현재 마우스 좌표를 반환하는 헬퍼 함수입니다.
 void InputClass::GetMouseLocation(int& mouseX, int& mouseY)
 {

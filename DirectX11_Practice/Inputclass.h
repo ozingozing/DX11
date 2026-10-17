@@ -37,6 +37,8 @@ public:
 
     // 상태 확인용 헬퍼 함수들
     bool IsEscapePressed();
+    bool IsLeftArrowPressed();
+    bool IsRightArrowPressed();
     void GetMouseLocation(int& mouseX, int& mouseY);
     bool IsMousePressed();
 

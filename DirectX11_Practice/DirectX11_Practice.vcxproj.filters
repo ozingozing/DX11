@@ -24,10 +24,10 @@
     <ClCompile Include="Systemclass.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="Inputclass.cpp">
+    <ClCompile Include="InputClass.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="Applicationclass.cpp">
+    <ClCompile Include="ApplicationClass.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
     <ClCompile Include="D3dclass.cpp">
@@ -93,15 +93,24 @@
     <ClCompile Include="ShaderManagerClass.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="FrustumClass.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="ModelListClass.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="PositionClass.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Systemclass.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="Inputclass.h">
+    <ClInclude Include="InputClass.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="Applicationclass.h">
+    <ClInclude Include="ApplicationClass.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="D3dclass.h">
@@ -165,6 +174,15 @@
       <Filter>헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="ShaderManagerClass.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="FrustumClass.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="ModelListClass.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="PositionClass.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>

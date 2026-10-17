@@ -134,7 +134,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Alphamapshaderclass.cpp" />
-    <ClCompile Include="Applicationclass.cpp" />
+    <ClCompile Include="ApplicationClass.cpp" />
     <ClCompile Include="BitmapClass.cpp" />
     <ClCompile Include="Cameraclass.cpp" />
     <ClCompile Include="Colorshaderclass.cpp" />
@@ -142,14 +142,17 @@
     <ClCompile Include="FontClass.cpp" />
     <ClCompile Include="FontShaderClass.cpp" />
     <ClCompile Include="FpsClass.cpp" />
-    <ClCompile Include="Inputclass.cpp" />
+    <ClCompile Include="FrustumClass.cpp" />
+    <ClCompile Include="InputClass.cpp" />
     <ClCompile Include="LightClass.cpp" />
     <ClCompile Include="LightMapShaderClass.cpp" />
     <ClCompile Include="LightShaderClass.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Modelclass.cpp" />
+    <ClCompile Include="ModelListClass.cpp" />
     <ClCompile Include="MultiTextureShaderClass.cpp" />
     <ClCompile Include="Normalmapshaderclass.cpp" />
+    <ClCompile Include="PositionClass.cpp" />
     <ClCompile Include="ShaderManagerClass.cpp" />
     <ClCompile Include="SpecMapShaderClass.cpp" />
     <ClCompile Include="SpriteClass.cpp" />
@@ -161,7 +164,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Alphamapshaderclass.h" />
-    <ClInclude Include="Applicationclass.h" />
+    <ClInclude Include="ApplicationClass.h" />
     <ClInclude Include="BitmapClass.h" />
     <ClInclude Include="Cameraclass.h" />
     <ClInclude Include="Colorshaderclass.h" />
@@ -169,13 +172,16 @@
     <ClInclude Include="FontClass.h" />
     <ClInclude Include="FontShaderClass.h" />
     <ClInclude Include="FpsClass.h" />
-    <ClInclude Include="Inputclass.h" />
+    <ClInclude Include="FrustumClass.h" />
+    <ClInclude Include="InputClass.h" />
     <ClInclude Include="LightClass.h" />
     <ClInclude Include="LightMapShaderClass.h" />
     <ClInclude Include="LightShaderClass.h" />
     <ClInclude Include="Modelclass.h" />
+    <ClInclude Include="ModelListClass.h" />
     <ClInclude Include="MultiTextureShaderClass.h" />
     <ClInclude Include="Normalmapshaderclass.h" />
+    <ClInclude Include="PositionClass.h" />
     <ClInclude Include="ShaderManagerClass.h" />
     <ClInclude Include="SpecMapShaderClass.h" />
     <ClInclude Include="SpriteClass.h" />
