@@ -1,15 +1,15 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Filename: applicationclass.cpp
+// Filename: ApplicationClass.cpp
 ////////////////////////////////////////////////////////////////////////////////
-#include "applicationclass.h"
+#include "ApplicationClass.h"
 
 
 ApplicationClass::ApplicationClass()
 {
 	m_Direct3D = 0;
 	m_Camera = 0;
+	m_TextureCamera = 0;
 	m_Model = 0;
-	m_Light = 0;
 }
 
 
@@ -47,12 +47,14 @@ bool ApplicationClass::Initialize(int screenWidth, int screenHeight, HWND hwnd)
 	// 매 프레임마다 동일한 위치에 텍스트를 렌더링하려면 이 수정되지 않은 뷰 매트릭스가 필요합니다."
 	m_Camera = new CameraClass;
 
-	m_Camera->SetPosition(0.0f, 0.0f, -10.0f);
+	m_Camera->SetPosition(0.0f, 0.0f, -5.0f);
 	m_Camera->Render();
-	m_Camera->GetViewMatrix(m_baseViewMatrix);
+
+	m_TextureCamera = new CameraClass;
+
 
 	// Set the file name of the model.
-	strcpy_s(modelFilename, "../Resource/cube.obj");
+	strcpy_s(modelFilename, "../Resource/cube.txt");
 	// Set the file name of the textures.
 	strcpy_s(textureFilename1, "../Resource/stone01.tga");
 
@@ -66,72 +68,33 @@ bool ApplicationClass::Initialize(int screenWidth, int screenHeight, HWND hwnd)
 		return false;
 	}
 
-	// Create and initialize the light object.
-	m_Light = new LightClass;
+	// Create and initialize the texture shader object.
+	m_TextureShader = new TextureShaderClass;
 
-	m_Light->SetDiffuseColor(1.0f, 1.0f, 1.0f, 1.0f);
-	m_Light->SetDirection(0.0f, 1.0f, 1.0f);
+	result = m_TextureShader->Initialize(m_Direct3D->GetDevice(), hwnd);
+	if (!result)
+	{
+		MessageBox(hwnd, L"Could not initialize the texture shader object.", L"Error", MB_OK);
+		return false;
+	}
 
-	// Create and initialize the light shader object.
-	m_LightShader = new LightShaderClass;
+	// Create and initialize the render to texture object.
+	m_RenderTexture = new RenderTextureClass;
 
-	result = m_LightShader->Initialize(m_Direct3D->GetDevice(), hwnd);
+	result = m_RenderTexture->Initialize(m_Direct3D->GetDevice(), 1024, 1024, SCREEN_DEPTH, SCREEN_NEAR, 1);
 	if (!result)
 	{
 		return false;
 	}
 
-	// Create and initialize the font shader object.
-	m_FontShader = new FontShaderClass;
+	// Create and initialize the display plane object.
+	m_DisplayPlane = new DisplayPlaneClass;
 
-	result = m_FontShader->Initialize(m_Direct3D->GetDevice(), hwnd);
-	if (!result)
-	{
-		MessageBox(hwnd, L"Could not initialize the font shader object.", L"Error", MB_OK);
-		return false;
-	}
-
-	// Create and initialize the font object.
-	m_Font = new FontClass;
-
-	result = m_Font->Initialize(m_Direct3D->GetDevice(), m_Direct3D->GetDeviceContext(), 0);
+	result = m_DisplayPlane->Initialize(m_Direct3D->GetDevice(), 1.0f, 1.0f);
 	if (!result)
 	{
 		return false;
 	}
-
-	// Set the initial render count string.
-	strcpy_s(renderString, "Render Count: 0");
-
-	// Create and initialize the text object for the render count string.
-	m_RenderCountString = new TextClass;
-
-	result = m_RenderCountString->Initialize(m_Direct3D->GetDevice(), m_Direct3D->GetDeviceContext(), screenWidth, screenHeight, 32, m_Font, renderString, 10, 10, 1.0f, 1.0f, 1.0f);
-	if (!result)
-	{
-		return false;
-	}
-
-	// Create and initialize the model list object.
-	m_ModelList = new ModelListClass;
-	m_ModelList->Initialize(25);
-
-	// We create a timer also since we want smooth movement when moving the camera around according to the frame time.
-	// Create and initialize the timer object.
-	m_Timer = new TimerClass;
-
-	result = m_Timer->Initialize();
-	if (!result)
-	{
-		return false;
-	}
-	// Here we create the new PositionClass object for maintaining where the viewer is positioned and where they are looking at.
-	// Create the position class object.
-	m_Position = new PositionClass;
-	// And finally, we create our new FrustumClass object here.
-
-	// Create the frustum class object.
-	m_Frustum = new FrustumClass;
 
 	return true;
 }
@@ -139,72 +102,28 @@ bool ApplicationClass::Initialize(int screenWidth, int screenHeight, HWND hwnd)
 
 void ApplicationClass::Shutdown()
 {
-	// Release the frustum class object.
-	if (m_Frustum)
+	// Release the display plane object.
+	if (m_DisplayPlane)
 	{
-		delete m_Frustum;
-		m_Frustum = 0;
+		m_DisplayPlane->Shutdown();
+		delete m_DisplayPlane;
+		m_DisplayPlane = 0;
 	}
 
-	// Release the position object.
-	if (m_Position)
+	// Release the render to texture object.
+	if (m_RenderTexture)
 	{
-		delete m_Position;
-		m_Position = 0;
+		m_RenderTexture->Shutdown();
+		delete m_RenderTexture;
+		m_RenderTexture = 0;
 	}
 
-	// Release the timer object.
-	if (m_Timer)
+	// Release the texture shader object.
+	if (m_TextureShader)
 	{
-		delete m_Timer;
-		m_Timer = 0;
-	}
-
-	// Release the model list object.
-	if (m_ModelList)
-	{
-		m_ModelList->Shutdown();
-		delete m_ModelList;
-		m_ModelList = 0;
-	}
-
-	// Release the text objects for the render count string.
-	if (m_RenderCountString)
-	{
-		m_RenderCountString->Shutdown();
-		delete m_RenderCountString;
-		m_RenderCountString = 0;
-	}
-
-	// Release the font object.
-	if (m_Font)
-	{
-		m_Font->Shutdown();
-		delete m_Font;
-		m_Font = 0;
-	}
-
-	// Release the font shader object.
-	if (m_FontShader)
-	{
-		m_FontShader->Shutdown();
-		delete m_FontShader;
-		m_FontShader = 0;
-	}
-
-	// Release the light shader object.
-	if (m_LightShader)
-	{
-		m_LightShader->Shutdown();
-		delete m_LightShader;
-		m_LightShader = 0;
-	}
-
-	// Release the light object.
-	if (m_Light)
-	{
-		delete m_Light;
-		m_Light = 0;
+		m_TextureShader->Shutdown();
+		delete m_TextureShader;
+		m_TextureShader = 0;
 	}
 
 	// Release the model object.
@@ -213,6 +132,12 @@ void ApplicationClass::Shutdown()
 		m_Model->Shutdown();
 		delete m_Model;
 		m_Model = 0;
+	}
+
+	if(m_TextureCamera)
+	{
+		delete m_TextureCamera;
+		m_TextureCamera = 0;
 	}
 
 	// Release the camera object.
@@ -236,11 +161,9 @@ void ApplicationClass::Shutdown()
 
 bool ApplicationClass::Frame(InputClass* Input)
 {
-	float rotationY;
-	bool result, keyDown;
+	static float rotation = 0.0f;
+	bool result;
 
-	// Update the system stats.
-	m_Timer->Frame();
 
 	// Check if the user pressed escape and wants to exit the application.
 	if (Input->IsEscapePressed())
@@ -248,29 +171,79 @@ bool ApplicationClass::Frame(InputClass* Input)
 		return false;
 	}
 
-	// Set the frame time for calculation the updated position.
-	m_Position->SetFrameTime(m_Timer->GetTime());
+	// Update the rotation variable each frame.
+	rotation -= 0.0174532925f * 0.25f;
+	if (rotation < 0.0f)
+	{
+		rotation += 360.0f;
+	}
 
-	// Check if the left or right arrow key has been pressed, if so rotate the camera accordingly.
-	keyDown = Input->IsLeftArrowPressed();
-	m_Position->TurnLeft(keyDown);
+	// Render the scene to a render texture.
+	result = RenderSceneToTexture(rotation);
+	if (!result)
+	{
+		return false;
+	}
 
-	keyDown = Input->IsRightArrowPressed();
-	m_Position->TurnRight(keyDown);
-
-	// Get the current view point rotation.
-	m_Position->GetRotation(rotationY);
-
-	// Set the rotation of the camera.
-	m_Camera->SetRotation(0.0f, rotationY, 0.0f);
-	m_Camera->Render();
-
-	// Render the graphics scene.
+	// Render the final graphics scene.
 	result = Render();
 	if (!result)
 	{
 		return false;
 	}
+
+	return true;
+}
+
+
+bool ApplicationClass::RenderSceneToTexture(float rotation)
+{
+	XMMATRIX worldMatrix, viewMatrix, projectionMatrix;
+	bool result;
+
+	// RenderSceneToTexture의 첫 번째 부분은 렌더링 출력을 백 버퍼에서 렌더 텍스처 객체로 변경하는 곳입니다. 
+	// 또한 여기서는 렌더 텍스처를 연한 파란색으로 초기화(Clear)합니다.
+
+	// 렌더 타겟을 렌더 텍스처로 설정하고 내용을 지웁니다.
+	m_RenderTexture->SetRenderTarget(m_Direct3D->GetDeviceContext());
+	m_RenderTexture->ClearRenderTarget(m_Direct3D->GetDeviceContext(), 1.0f, 0.5f, 1.0f, 1.0f);
+
+	// 이제 카메라로부터 결과 뷰 매트릭스를 얻기 전에 카메라 위치를 먼저 설정합니다. 
+	// 카메라는 하나만 사용하고 있지만, 일반 Render 함수에서도 다른 위치에서 카메라를 사용하므로 매 프레임마다 설정해 주어야 합니다.
+
+	// 큐브를 보기 위한 카메라의 위치를 설정합니다.
+	m_TextureCamera->SetPosition(3.0f, 2.0f, -5.0f);
+	m_TextureCamera->SetRotation(15.0f, -30.0f, 0.0f);
+	m_TextureCamera->Render();
+
+	// 중요: 매트릭스를 가져올 때, 투영 매트릭스는 일반 화면 투영 매트릭스와 크기(치수)가 다르므로 렌더 텍스처로부터 가져와야 합니다. 
+	// 렌더 텍스처가 올바르지 않게 렌더링되는 것처럼 보인다면, 대개 잘못된 투영 매트릭스를 사용하고 있기 때문입니다.
+
+	// 매트릭스를 가져옵니다.
+	m_Direct3D->GetWorldMatrix(worldMatrix);
+	m_TextureCamera->GetViewMatrix(viewMatrix);
+	m_RenderTexture->GetProjectionMatrix(projectionMatrix);
+
+	// 이제 평소처럼 일반 회전 큐브 씬을 렌더링하지만, 출력 결과는 이제 렌더 텍스처로 향하게 됩니다.
+
+	// 큐브가 회전하도록 회전 값에 따라 월드 매트릭스를 회전시킵니다.
+	worldMatrix = XMMatrixRotationY(rotation);
+
+	// 텍스처 셰이더를 사용하여 모델을 렌더링합니다.
+	m_Model->Render(m_Direct3D->GetDeviceContext());
+
+	result = m_TextureShader->Render(m_Direct3D->GetDeviceContext(), m_Model->GetIndexCount(), worldMatrix, viewMatrix, projectionMatrix, m_Model->GetTexture());
+	if (!result)
+	{
+		return false;
+	}
+
+	// 렌더링이 끝나면 렌더링 대상을 원래의 백 버퍼로 다시 전환해야 합니다. 
+	// 또한 렌더 텍스처의 뷰포트 크기가 화면의 뷰포트와 다를 수 있으므로 뷰포트도 원래대로 되돌려야 합니다.
+
+	// 렌더 타겟을 더 이상 렌더 투 텍스처가 아닌 원래의 백 버퍼로 재설정합니다. 그리고 뷰포트도 원래대로 재설정합니다.
+	m_Direct3D->SetBackBufferRenderTarget();
+	m_Direct3D->ResetViewport();
 
 	return true;
 }
@@ -291,81 +264,54 @@ bool ApplicationClass::Render()
 	m_Camera->GetViewMatrix(viewMatrix);
 	m_Direct3D->GetProjectionMatrix(projectionMatrix);
 	m_Direct3D->GetOrthoMatrix(orthoMatrix);
-	// The major change to the Render function is that we now construct the viewing frustum each frame based on the updated viewing matrix.This construction has to occur each time the view matrix changes or the frustum culling checks we do will not be correct.
+	
+	// Setup matrices - Top Right plane.
+	worldMatrix = XMMatrixTranslation(1.5f, 1.f, 0.0f);
 
-	// Construct the frustum.
-	m_Frustum->ConstructFrustum(viewMatrix, projectionMatrix, SCREEN_DEPTH);
+	// Render the display plane using the texture shader and the render texture resource.
+	m_DisplayPlane->Render(m_Direct3D->GetDeviceContext());
 
-	// Get the number of models that will be rendered.
-	modelCount = m_ModelList->GetModelCount();
-
-	// Initialize the count of models that have been rendered.
-	renderCount = 0;
-	// Now loop through all the models in the ModelListClass object.
-
-	// Go through all the models and render them only if they can be seen by the camera view.
-	for (i = 0; i < modelCount; i++)
-	{
-		// Get the position and color of the sphere model at this index.
-		m_ModelList->GetData(i, positionX, positionY, positionZ);
-
-		// Set the radius of the sphere to 1.0 since this is already known.
-		radius = 1.0f;
-		// Here is where we use the new FrustumClass object.We check if the sphere is viewable in the viewing frustum.If it can be seen we render it, if it cannot be seen we skip it and check the next one.This is where we will gain all the speed by using frustum culling.
-
-			// Check if the sphere model is in the view frustum.
-		renderModel = m_Frustum->CheckSphere(positionX, positionY, positionZ, radius);
-
-		// If it can be seen then render it, if not skip this model and check the next sphere.
-		if (renderModel)
-		{
-			// Move the model to the location it should be rendered at.
-			worldMatrix = XMMatrixTranslation(positionX, positionY, positionZ);
-
-			// Render the model using the light shader.
-			m_Model->Render(m_Direct3D->GetDeviceContext());
-
-			result = m_LightShader->Render(m_Direct3D->GetDeviceContext(), m_Model->GetIndexCount(), worldMatrix, viewMatrix, projectionMatrix,
-				m_Model->GetTexture(0), m_Light->GetDirection(), m_Light->GetDiffuseColor());
-			if (!result)
-			{
-				return false;
-			}
-
-			// Since this model was rendered then increase the count for this frame.
-			renderCount++;
-		}
-	}
-
-	// Update the render count text.
-	result = UpdateRenderCountString(renderCount);
-	if (!result)
-	{
-		return false;
-	}
-	// We use the UpdateRenderCountString function and the TextClass to display how many spheres were actually rendered.
-	// We can also infer from this number that the spheres that were not rendered were instead culled using the new FrustumClass object.
-
-	// Disable the Z buffer and enable alpha blending for 2D rendering.
-	m_Direct3D->TurnZBufferOff();
-	m_Direct3D->EnableAlphaBlending();
-
-	// Reset the world matrix.
-	m_Direct3D->GetWorldMatrix(worldMatrix);
-
-	// Render the render count text string using the font shader.
-	m_RenderCountString->Render(m_Direct3D->GetDeviceContext());
-
-	result = m_FontShader->Render(m_Direct3D->GetDeviceContext(), m_RenderCountString->GetIndexCount(), worldMatrix, m_baseViewMatrix, orthoMatrix,
-		m_Font->GetTexture(), m_RenderCountString->GetPixelColor());
+	result = m_TextureShader->Render(m_Direct3D->GetDeviceContext(), m_DisplayPlane->GetIndexCount(), worldMatrix, viewMatrix, projectionMatrix, m_RenderTexture->GetShaderResourceView());
 	if (!result)
 	{
 		return false;
 	}
 
-	// Enable the Z buffer and disable alpha blending now that 2D rendering is complete.
-	m_Direct3D->TurnZBufferOn();
-	m_Direct3D->DisableAlphaBlending();
+	// Setup matrices - Top Left plane.
+	worldMatrix = XMMatrixTranslation(-1.5f, 1.f, 0.0f);
+
+	// Render the display plane using the texture shader and the render texture resource.
+	m_DisplayPlane->Render(m_Direct3D->GetDeviceContext());
+
+	result = m_TextureShader->Render(m_Direct3D->GetDeviceContext(), m_DisplayPlane->GetIndexCount(), worldMatrix, viewMatrix, projectionMatrix, m_RenderTexture->GetShaderResourceView());
+	if (!result)
+	{
+		return false;
+	}
+
+	// Setup matrices - Bottom left display plane.
+	worldMatrix = XMMatrixTranslation(-1.5f, -1.f, 0.0f);
+
+	// Render the display plane using the texture shader and the render texture resource.
+	m_DisplayPlane->Render(m_Direct3D->GetDeviceContext());
+
+	result = m_TextureShader->Render(m_Direct3D->GetDeviceContext(), m_DisplayPlane->GetIndexCount(), worldMatrix, viewMatrix, projectionMatrix, m_RenderTexture->GetShaderResourceView());
+	if (!result)
+	{
+		return false;
+	}
+
+	// Setup matrices - Bottom right display plane.
+	worldMatrix = XMMatrixTranslation(1.5f, -1.f, 0.0f);
+
+	// Render the display plane using the texture shader and the render texture resource.
+	m_DisplayPlane->Render(m_Direct3D->GetDeviceContext());
+
+	result = m_TextureShader->Render(m_Direct3D->GetDeviceContext(), m_DisplayPlane->GetIndexCount(), worldMatrix, viewMatrix, projectionMatrix, m_RenderTexture->GetShaderResourceView());
+	if (!result)
+	{
+		return false;
+	}
 
 	// Present the rendered scene to the screen.
 	m_Direct3D->EndScene();
@@ -449,29 +395,6 @@ bool ApplicationClass::Render(float rotation)
 
 	// Present the rendered scene to the screen.
 	m_Direct3D->EndScene();
-
-	return true;
-}
-
-bool ApplicationClass::UpdateRenderCountString(int renderCount)
-{
-	char tempString[16], finalString[32];
-	bool result;
-
-
-	// Convert the render count integer to string format.
-	sprintf_s(tempString, "%d", renderCount);
-
-	// Setup the render count string.
-	strcpy_s(finalString, "Render Count: ");
-	strcat_s(finalString, tempString);
-
-	// Update the sentence vertex buffer with the new string information.
-	result = m_RenderCountString->UpdateText(m_Direct3D->GetDeviceContext(), m_Font, finalString, 10, 10, 1.0f, 1.0f, 1.0f);
-	if (!result)
-	{
-		return false;
-	}
 
 	return true;
 }

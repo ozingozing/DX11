@@ -12,17 +12,10 @@
 #include "D3DClass.h"
 #include "InputClass.h"
 #include "CameraClass.h"
-#include "modelclass.h"
-#include "lightclass.h"
-#include "LightShaderClass.h"
-#include "FontClass.h"
-#include "FontShaderClass.h"
-#include "TextClass.h"
-#include "ModelListClass.h"
-#include "TimerClass.h"
-#include "PositionClass.h"
-#include "FrustumClass.h"
-#include "ShaderManagerClass.h"
+#include "ModelClass.h"
+#include "TextureShaderClass.h"
+#include "RenderTextureClass.h"
+#include "DisplayPlaneClass.h"
 
 
 /////////////
@@ -47,25 +40,19 @@ public:
     bool Initialize(int, int, HWND);
     void Shutdown();
     bool Frame(InputClass*);
+	bool RenderSceneToTexture(float);
 
 private:
     bool Render();
     bool Render(float);
-    bool UpdateRenderCountString(int);
 
 private:
     D3DClass* m_Direct3D;
     CameraClass* m_Camera;
+	CameraClass* m_TextureCamera;
     ModelClass* m_Model;
-    LightClass* m_Light;
-    LightShaderClass* m_LightShader;
-    FontShaderClass* m_FontShader;
-    FontClass* m_Font;
-    TextClass* m_RenderCountString;
-    ModelListClass* m_ModelList;
-    TimerClass* m_Timer;
-    PositionClass* m_Position;
-    FrustumClass* m_Frustum;
-    XMMATRIX m_baseViewMatrix;
+    TextureShaderClass* m_TextureShader;
+    RenderTextureClass* m_RenderTexture;
+    DisplayPlaneClass* m_DisplayPlane;
 };
 #endif
