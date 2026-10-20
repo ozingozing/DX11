@@ -39,6 +39,8 @@ public:
     bool IsEscapePressed();
     bool IsLeftArrowPressed();
     bool IsRightArrowPressed();
+	bool IsUpArrowPressed();
+	bool IsDownArrowPressed();
     void GetMouseLocation(int& mouseX, int& mouseY);
     bool IsMousePressed();
 

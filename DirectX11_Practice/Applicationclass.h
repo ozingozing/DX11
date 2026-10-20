@@ -13,9 +13,7 @@
 #include "InputClass.h"
 #include "CameraClass.h"
 #include "ModelClass.h"
-#include "TextureShaderClass.h"
-#include "RenderTextureClass.h"
-#include "DisplayPlaneClass.h"
+#include "FogShaderClass.h"
 
 
 /////////////
@@ -40,19 +38,17 @@ public:
     bool Initialize(int, int, HWND);
     void Shutdown();
     bool Frame(InputClass*);
-	bool RenderSceneToTexture(float);
 
 private:
     bool Render();
     bool Render(float);
 
 private:
+    float m_cameraZ;
+
     D3DClass* m_Direct3D;
     CameraClass* m_Camera;
-	CameraClass* m_TextureCamera;
     ModelClass* m_Model;
-    TextureShaderClass* m_TextureShader;
-    RenderTextureClass* m_RenderTexture;
-    DisplayPlaneClass* m_DisplayPlane;
+	FogShaderClass* m_FogShader;
 };
 #endif
