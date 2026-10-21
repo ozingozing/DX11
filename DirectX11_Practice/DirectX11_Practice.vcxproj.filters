@@ -111,6 +111,9 @@
     <ClCompile Include="FogShaderClass.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="ClipPlaneShaderClass.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Systemclass.h">
@@ -206,6 +209,9 @@
     <ClInclude Include="FogShaderClass.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
+    <ClInclude Include="ClipPlaneShaderClass.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Color.hlsl">
@@ -236,6 +242,9 @@
       <Filter>HLSL</Filter>
     </FxCompile>
     <FxCompile Include="Fog.hlsl">
+      <Filter>HLSL</Filter>
+    </FxCompile>
+    <FxCompile Include="ClipPlane.hlsl">
       <Filter>HLSL</Filter>
     </FxCompile>
   </ItemGroup>

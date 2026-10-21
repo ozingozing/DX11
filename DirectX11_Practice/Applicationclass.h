@@ -13,7 +13,7 @@
 #include "InputClass.h"
 #include "CameraClass.h"
 #include "ModelClass.h"
-#include "FogShaderClass.h"
+#include "ClipPlaneShaderClass.h"
 
 
 /////////////
@@ -44,11 +44,11 @@ private:
     bool Render(float);
 
 private:
-    float m_cameraZ;
+	float m_cameraZ;
 
     D3DClass* m_Direct3D;
     CameraClass* m_Camera;
     ModelClass* m_Model;
-	FogShaderClass* m_FogShader;
+	ClipPlaneShaderClass* m_ClipPlaneShader;
 };
 #endif

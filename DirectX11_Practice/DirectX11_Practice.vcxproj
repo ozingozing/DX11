@@ -137,6 +137,7 @@
     <ClCompile Include="ApplicationClass.cpp" />
     <ClCompile Include="BitmapClass.cpp" />
     <ClCompile Include="Cameraclass.cpp" />
+    <ClCompile Include="ClipPlaneShaderClass.cpp" />
     <ClCompile Include="Colorshaderclass.cpp" />
     <ClCompile Include="D3dclass.cpp" />
     <ClCompile Include="DisplayPlaneClass.cpp" />
@@ -170,6 +171,7 @@
     <ClInclude Include="ApplicationClass.h" />
     <ClInclude Include="BitmapClass.h" />
     <ClInclude Include="Cameraclass.h" />
+    <ClInclude Include="ClipPlaneShaderClass.h" />
     <ClInclude Include="Colorshaderclass.h" />
     <ClInclude Include="D3dclass.h" />
     <ClInclude Include="DisplayPlaneClass.h" />
@@ -202,6 +204,12 @@
     <FxCompile Include="AlphaMap.hlsl">
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">AlphaMapPixelShader</EntryPointName>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+    </FxCompile>
+    <FxCompile Include="ClipPlane.hlsl">
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">ClipPlanePixelShader</EntryPointName>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </FxCompile>
     <FxCompile Include="Color.hlsl">
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">ColorPixelShader</EntryPointName>
