@@ -13,7 +13,7 @@
 #include "InputClass.h"
 #include "CameraClass.h"
 #include "ModelClass.h"
-#include "ClipPlaneShaderClass.h"
+#include "TranslateShaderClass.h"
 
 
 /////////////
@@ -41,7 +41,8 @@ public:
 
 private:
     bool Render();
-    bool Render(float);
+    //bool Render(float rotation);
+    bool Render(float textureTranslation);
 
 private:
 	float m_cameraZ;
@@ -49,6 +50,6 @@ private:
     D3DClass* m_Direct3D;
     CameraClass* m_Camera;
     ModelClass* m_Model;
-	ClipPlaneShaderClass* m_ClipPlaneShader;
+    TranslateShaderClass* m_TranslateShader;
 };
 #endif
