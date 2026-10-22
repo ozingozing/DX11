@@ -166,6 +166,7 @@
     <ClCompile Include="TextureShaderClass.cpp" />
     <ClCompile Include="TimerClass.cpp" />
     <ClCompile Include="TranslateShaderClass.cpp" />
+    <ClCompile Include="TransparentShaderClass.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Alphamapshaderclass.h" />
@@ -201,6 +202,7 @@
     <ClInclude Include="TextureShaderClass.h" />
     <ClInclude Include="TimerClass.h" />
     <ClInclude Include="TranslateShaderClass.h" />
+    <ClInclude Include="TransparentShaderClass.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="AlphaMap.hlsl">
@@ -251,6 +253,10 @@
     </FxCompile>
     <FxCompile Include="Translate.hlsl">
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">TranslatePixelShader</EntryPointName>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+    </FxCompile>
+    <FxCompile Include="Transparent.hlsl">
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">TransparentPixelShader</EntryPointName>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
     </FxCompile>
   </ItemGroup>

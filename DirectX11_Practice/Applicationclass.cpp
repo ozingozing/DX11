@@ -8,9 +8,13 @@ ApplicationClass::ApplicationClass()
 {
 	m_Direct3D = 0;
 	m_Camera = 0;
-	m_Model = 0;
-	m_cameraZ = 0;
-	m_TranslateShader = 0;
+	m_Model1 = 0;
+	m_Model2 = 0;
+	m_TextureShader = 0;
+	m_TransparentShader = 0;
+	m_model2X = 1.0f;
+	m_model2Y = 0.0f;
+	m_model2Z = -1.0f;
 }
 
 
@@ -29,7 +33,7 @@ ApplicationClass::~ApplicationClass()
 // so this model loads in a 3D cube object for rendering.
 bool ApplicationClass::Initialize(int screenWidth, int screenHeight, HWND hwnd)
 {
-	char modelFilename[128], textureFilename1[128], renderString[32];
+	char modelFilename[128], textureFilename1[128], textureFilename2[128], renderString[32];
 	bool result;
 
 
@@ -55,24 +59,40 @@ bool ApplicationClass::Initialize(int screenWidth, int screenHeight, HWND hwnd)
 	strcpy_s(modelFilename, "../Resource/square.txt");
 	// Set the file name of the textures.
 	strcpy_s(textureFilename1, "../Resource/stone01.tga");
+	strcpy_s(textureFilename2, "../Resource/dirt01.tga");
 
 
 	// Create and initialize the model object.
-	m_Model = new ModelClass;
-
-	result = m_Model->Initialize(m_Direct3D->GetDevice(), m_Direct3D->GetDeviceContext(), modelFilename, textureFilename1);
+	m_Model1 = new ModelClass;
+	m_Model2 = new ModelClass;
+	result = m_Model1->Initialize(m_Direct3D->GetDevice(), m_Direct3D->GetDeviceContext(), modelFilename, textureFilename1);
+	if (!result)
+	{
+		return false;
+	}
+	result = m_Model2->Initialize(m_Direct3D->GetDevice(), m_Direct3D->GetDeviceContext(), modelFilename, textureFilename2);
 	if (!result)
 	{
 		return false;
 	}
 
-	// Create and initialize the translate shader object.
-	m_TranslateShader = new TranslateShaderClass;
+	// Create and initialize the texture shader object.
+	m_TextureShader = new TextureShaderClass;
 
-	result = m_TranslateShader->Initialize(m_Direct3D->GetDevice(), hwnd);
+	result = m_TextureShader->Initialize(m_Direct3D->GetDevice(), hwnd);
 	if (!result)
 	{
 		MessageBox(hwnd, L"Could not initialize the translate shader object.", L"Error", MB_OK);
+		return false;
+	}
+
+	// Create and initialize the transparent shader object.
+	m_TransparentShader = new TransparentShaderClass;
+
+	result = m_TransparentShader->Initialize(m_Direct3D->GetDevice(), hwnd);
+	if (!result)
+	{
+		MessageBox(hwnd, L"Could not initialize the transparent shader object.", L"Error", MB_OK);
 		return false;
 	}
 
@@ -82,20 +102,36 @@ bool ApplicationClass::Initialize(int screenWidth, int screenHeight, HWND hwnd)
 
 void ApplicationClass::Shutdown()
 {
-	// Release the translate shader object.
-	if (m_TranslateShader)
+	// Release the transparent shader object.
+	if (m_TransparentShader)
 	{
-		m_TranslateShader->Shutdown();
-		delete m_TranslateShader;
-		m_TranslateShader = 0;
+		m_TransparentShader->Shutdown();
+		delete m_TransparentShader;
+		m_TransparentShader = 0;
+	}
+
+	// Release the texture shader object.
+	if (m_TextureShader)
+	{
+		m_TextureShader->Shutdown();
+		delete m_TextureShader;
+		m_TextureShader = 0;
 	}
 
 	// Release the model object.
-	if (m_Model)
+	if (m_Model2)
 	{
-		m_Model->Shutdown();
-		delete m_Model;
-		m_Model = 0;
+		m_Model2->Shutdown();
+		delete m_Model2;
+		m_Model2 = 0;
+	}
+
+	// Release the model object.
+	if (m_Model1)
+	{
+		m_Model1->Shutdown();
+		delete m_Model1;
+		m_Model1 = 0;
 	}
 
 	// Release the camera object.
@@ -119,11 +155,14 @@ void ApplicationClass::Shutdown()
 
 bool ApplicationClass::Frame(InputClass* Input)
 {
-	static float textureTranslation = 0.0f;
 	static float rotation = 0.0f;
 	const float moveSpeed = 0.05f;
 	bool result;
 
+	if (Input->IsKeyDown(DIK_LEFT))  m_model2X -= moveSpeed;
+	if (Input->IsKeyDown(DIK_RIGHT)) m_model2X += moveSpeed;
+	if (Input->IsKeyDown(DIK_W))     m_model2Z += moveSpeed;   // +z = 카메라에서 멀어짐
+	if (Input->IsKeyDown(DIK_S))     m_model2Z -= moveSpeed;   // -z = 카메라 쪽으로
 
 	// Check if the user pressed escape and wants to exit the application.
 	if (Input->IsEscapePressed())
@@ -131,21 +170,6 @@ bool ApplicationClass::Frame(InputClass* Input)
 		return false;
 	}
 
-	// Increment the texture translation.
-	textureTranslation += 0.01f;
-	if (textureTranslation > 1.0f)
-	{
-		textureTranslation -= 1.0f;
-	}
-
-	// 앞(위 화살표) / 뒤(아래 화살표)
-	if (Input->IsUpArrowPressed())   m_cameraZ += moveSpeed;   // +z = 큐브 쪽으로
-	if (Input->IsDownArrowPressed()) m_cameraZ -= moveSpeed;
-
-	if (m_cameraZ > -2.0f) m_cameraZ = -2.0f; // 카메라가 큐브를 뚫고 들어가지 않도록 제한
-	if (m_cameraZ < -30.0f) m_cameraZ = -30.0f; // 카메라가 너무 멀리 가지 않도록 제한
-
-	m_Camera->SetPosition(0.0f, 0.0f, m_cameraZ);
 	m_Camera->Render();
 
 	// Update the rotation variable each frame.
@@ -156,7 +180,7 @@ bool ApplicationClass::Frame(InputClass* Input)
 	}
 
 	// Render the final graphics scene.
-	result = Render(rotation);
+	result = Render();
 	if (!result)
 	{
 		return false;
@@ -167,11 +191,12 @@ bool ApplicationClass::Frame(InputClass* Input)
 
 bool ApplicationClass::Render()
 {
-	XMMATRIX worldMatrix, viewMatrix, projectionMatrix, orthoMatrix;
-	float positionX, positionY, positionZ, radius;
-	int modelCount, renderCount, i;
-	bool renderModel, result;
+	XMMATRIX worldMatrix, viewMatrix, projectionMatrix;
+	float blendAmount;
+	bool result;
 
+	// Set the blending amount to 50%.
+	blendAmount = 0.5f;
 
 	// Clear the buffers to begin the scene.
 	m_Direct3D->BeginScene(0.0f, 0.0f, 0.0f, 1.0f);
@@ -180,7 +205,33 @@ bool ApplicationClass::Render()
 	m_Direct3D->GetWorldMatrix(worldMatrix);
 	m_Camera->GetViewMatrix(viewMatrix);
 	m_Direct3D->GetProjectionMatrix(projectionMatrix);
-	m_Direct3D->GetOrthoMatrix(orthoMatrix);
+
+	// Render the first model that is using the dirt texture using the regular texture shader.
+	m_Model1->Render(m_Direct3D->GetDeviceContext());
+
+	result = m_TextureShader->Render(m_Direct3D->GetDeviceContext(), m_Model1->GetIndexCount(), worldMatrix, viewMatrix, projectionMatrix, m_Model1->GetTexture());
+	if (!result)
+	{
+		return false;
+	}
+
+	// Translate to the right by one unit and towards the camera by one unit.
+	worldMatrix = XMMatrixTranslation(m_model2X, m_model2Y, m_model2Z);
+
+	// Turn on alpha blending for the transparency to work.
+	m_Direct3D->EnableAlphaBlending();
+
+	// Render the second square model with the stone texture and use the 50% blending amount for transparency.
+	m_Model2->Render(m_Direct3D->GetDeviceContext());
+
+	result = m_TransparentShader->Render(m_Direct3D->GetDeviceContext(), m_Model2->GetIndexCount(), worldMatrix, viewMatrix, projectionMatrix, m_Model2->GetTexture(), blendAmount);
+	if (!result)
+	{
+		return false;
+	}
+
+	// Turn off alpha blending.
+	m_Direct3D->DisableAlphaBlending();
 
 	// Present the rendered scene to the screen.
 	m_Direct3D->EndScene();
@@ -239,14 +290,14 @@ bool ApplicationClass::Render(float textureTranslation)
 	//Now render the model with the TranslateShaderClass and send in the texture translation value.
 
 	// Render the model using the translate shader.
-	m_Model->Render(m_Direct3D->GetDeviceContext());
+	/*m_Model->Render(m_Direct3D->GetDeviceContext());
 
 	result = m_TranslateShader->Render(m_Direct3D->GetDeviceContext(), m_Model->GetIndexCount(), worldMatrix, viewMatrix, projectionMatrix,
 		m_Model->GetTexture(), textureTranslation);
 	if (!result)
 	{
 		return false;
-	}
+	}*/
 
 	// Present the rendered scene to the screen.
 	m_Direct3D->EndScene();

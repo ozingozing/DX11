@@ -13,7 +13,8 @@
 #include "InputClass.h"
 #include "CameraClass.h"
 #include "ModelClass.h"
-#include "TranslateShaderClass.h"
+#include "TextureShaderClass.h"
+#include "TransparentShaderClass.h"
 
 
 /////////////
@@ -40,16 +41,17 @@ public:
     bool Frame(InputClass*);
 
 private:
+    bool IsKeyDown(unsigned char key);
     bool Render();
     //bool Render(float rotation);
     bool Render(float textureTranslation);
 
 private:
-	float m_cameraZ;
-
     D3DClass* m_Direct3D;
     CameraClass* m_Camera;
-    ModelClass* m_Model;
-    TranslateShaderClass* m_TranslateShader;
+    ModelClass* m_Model1, *m_Model2;
+    TextureShaderClass* m_TextureShader;
+    TransparentShaderClass* m_TransparentShader;
+	float m_model2X, m_model2Y, m_model2Z;
 };
 #endif

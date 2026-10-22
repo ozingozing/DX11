@@ -203,6 +203,11 @@ bool InputClass::ReadMouse()
     return true;
 }
 
+bool InputClass::IsKeyDown(unsigned char key)
+{
+    return (m_keyboardState[key] & 0x80) != 0;
+}
+
 // ProcessInput에서는 장치 변화량을 바탕으로 실제 게임에서 쓸 좌표 등을 계산합니다.
 void InputClass::ProcessInput()
 {
