@@ -13,8 +13,10 @@
 #include "InputClass.h"
 #include "CameraClass.h"
 #include "ModelClass.h"
+#include "RenderTextureClass.h"
 #include "TextureShaderClass.h"
-#include "TransparentShaderClass.h"
+#include "ReflectionShaderClass.h"
+#include "ClipPlaneShaderClass.h"
 
 
 /////////////
@@ -43,15 +45,21 @@ public:
 private:
     bool IsKeyDown(unsigned char key);
     bool Render();
-    //bool Render(float rotation);
-    bool Render(float textureTranslation);
+    bool RenderReflectionToTexture(float);
+    bool Render(float);
 
 private:
+    bool m_invertPitch;
+    bool m_prevP;                 // 키를 "누른 순간"만 잡기 위한 이전 상태
+    bool m_useClip, m_prevC;
+
     D3DClass* m_Direct3D;
     CameraClass* m_Camera;
-    ModelClass* m_Model1, *m_Model2;
+    ModelClass* m_CubeModel;
+    ModelClass* m_FloorModel;
+    RenderTextureClass* m_RenderTexture;
     TextureShaderClass* m_TextureShader;
-    TransparentShaderClass* m_TransparentShader;
-	float m_model2X, m_model2Y, m_model2Z;
+    ReflectionShaderClass* m_ReflectionShader;
+	ClipPlaneShaderClass* m_ClipPlaneShader;
 };
 #endif

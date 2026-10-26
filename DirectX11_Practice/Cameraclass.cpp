@@ -120,3 +120,71 @@ void CameraClass::GetViewMatrix(XMMATRIX& viewMatrix)
 	viewMatrix = m_viewMatrix;
 	return;
 }
+
+// 새로운 RenderReflection 함수는 일반 Render 함수가 뷰 매트릭스를 빌드하는 것과
+// 동일한 방식으로 반사 뷰 매트릭스를 빌드합니다.
+// 가장 큰 차이점은 Y축 평면 역할을 할 객체의 높이(height)를 입력으로 받아,
+// 그 높이를 사용하여 반사를 위해 position.y 변수를 반전시킨다는 점입니다.
+// 또한 피치(pitch) 값도 반전시켜야 합니다. 이렇게 하면 셰이더에서 사용할 수 있는
+// 반사 뷰 매트릭스가 빌드됩니다.
+// 참고: 이 함수는 Y축 평면에서만 작동합니다.
+void CameraClass::RenderReflection(float height, bool invertPitch = true)
+{
+	XMFLOAT3 up, position, lookAt;
+	XMVECTOR upVector, positionVector, lookAtVector;
+	float yaw, pitch, roll;
+	XMMATRIX rotationMatrix;
+
+
+	// 위쪽을 가리키는 벡터를 설정합니다.
+	up.x = 0.0f;
+	up.y = 1.0f;
+	up.z = 0.0f;
+
+	// XMVECTOR 구조체로 로드합니다.
+	upVector = XMLoadFloat3(&up);
+
+	// 월드에서 카메라의 위치를 설정합니다.
+	position.x = m_positionX;
+	position.y = -m_positionY + (height * 2.0f);
+	position.z = m_positionZ;
+
+	// XMVECTOR 구조체로 로드합니다.
+	positionVector = XMLoadFloat3(&position);
+
+	// 카메라가 기본적으로 바라보는 곳을 설정합니다.
+	lookAt.x = 0.0f;
+	lookAt.y = 0.0f;
+	lookAt.z = 1.0f;
+
+	// XMVECTOR 구조체로 로드합니다.
+	lookAtVector = XMLoadFloat3(&lookAt);
+
+	// 요(Y축), 피치(X축), 롤(Z축) 회전 값을 라디안 단위로 설정합니다.
+	//pitch = (-1.0f * m_rotationX) * 0.0174532925f;  // 반사를 위해 피치 값을 반전합니다.
+	pitch = (invertPitch ? -m_rotationX : m_rotationX) * 0.0174532925f;
+	yaw = m_rotationY * 0.0174532925f;
+	roll = m_rotationZ * 0.0174532925f;
+
+	// 요, 피치, 롤 값을 사용하여 회전 매트릭스를 생성합니다.
+	rotationMatrix = XMMatrixRotationRollPitchYaw(pitch, yaw, roll);
+
+	// 뷰가 원점에서 올바르게 회전할 수 있도록 lookAt 및 up 벡터를 회전 매트릭스로 변환합니다.
+	lookAtVector = XMVector3TransformCoord(lookAtVector, rotationMatrix);
+	upVector = XMVector3TransformCoord(upVector, rotationMatrix);
+
+	// 회전된 카메라 위치를 뷰어의 위치로 평행이동시킵니다.
+	lookAtVector = XMVectorAdd(positionVector, lookAtVector);
+
+	// 마지막으로 업데이트된 세 개의 벡터로부터 뷰 매트릭스를 생성합니다.
+	m_reflectionViewMatrix = XMMatrixLookAtLH(positionVector, lookAtVector, upVector);
+
+	return;
+}
+
+// GetReflectionViewMatrix 함수는 호출하는 함수들에게 새로운 반사 뷰 매트릭스를 반환합니다.
+void CameraClass::GetReflectionViewMatrix(XMMATRIX& reflectionViewMatrix)
+{
+	reflectionViewMatrix = m_reflectionViewMatrix;
+	return;
+}

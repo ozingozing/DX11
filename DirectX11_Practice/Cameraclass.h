@@ -29,10 +29,17 @@ public:
 	void Render();
 	void GetViewMatrix(XMMATRIX&);
 
+	void RenderReflection(float height, bool invertPitch);   // 기본값 true라 기존 호출은 그대로 동작
+
+	//void RenderReflection(float);
+	void GetReflectionViewMatrix(XMMATRIX&);
+
 private:
+	bool invertPitch = true;
 	float m_positionX, m_positionY, m_positionZ;
 	float m_rotationX, m_rotationY, m_rotationZ;
 	XMMATRIX m_viewMatrix;
+	XMMATRIX m_reflectionViewMatrix;
 };
 
 #endif

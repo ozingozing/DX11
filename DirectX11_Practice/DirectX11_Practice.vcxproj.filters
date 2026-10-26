@@ -120,6 +120,9 @@
     <ClCompile Include="TransparentShaderClass.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="ReflectionShaderClass.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Systemclass.h">
@@ -224,6 +227,9 @@
     <ClInclude Include="TransparentShaderClass.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
+    <ClInclude Include="ReflectionShaderClass.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Color.hlsl">
@@ -263,6 +269,9 @@
       <Filter>HLSL</Filter>
     </FxCompile>
     <FxCompile Include="Transparent.hlsl">
+      <Filter>HLSL</Filter>
+    </FxCompile>
+    <FxCompile Include="Reflection.hlsl">
       <Filter>HLSL</Filter>
     </FxCompile>
   </ItemGroup>
