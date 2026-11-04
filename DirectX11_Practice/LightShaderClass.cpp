@@ -66,34 +66,20 @@ void LightShaderClass::Shutdown()
 
 // Render 함수는 이제 조명 방향(light direction)과 조명 확산색(diffuse color)을 입력으로 받습니다.
 // 이 변수들은 SetShaderParameters 함수로 전달되어 최종적으로 셰이더 내부에서 설정됩니다.
-bool LightShaderClass::Render(
-    ID3D11DeviceContext* deviceContext,
-    int indexCount,
-    XMMATRIX worldMatrix,
-    XMMATRIX viewMatrix,
-    XMMATRIX projectionMatrix,
-    ID3D11ShaderResourceView* texture,
-    XMFLOAT3 lightDirection,
-    XMFLOAT4 diffuseColor)
+bool LightShaderClass::Render(ID3D11DeviceContext* deviceContext, int indexCount, XMMATRIX worldMatrix, XMMATRIX viewMatrix, XMMATRIX projectionMatrix,
+    ID3D11ShaderResourceView* texture, XMFLOAT3 lightDirection, XMFLOAT4 ambientColor, XMFLOAT4 diffuseColor)
 {
     bool result;
 
 
-    // 렌더링에 사용할 셰이더 매개변수를 설정합니다.
-    result = SetShaderParameters(
-        deviceContext,
-        worldMatrix,
-        viewMatrix,
-        projectionMatrix,
-        texture,
-        lightDirection,
-        diffuseColor);
+    // Set the shader parameters that it will use for rendering.
+    result = SetShaderParameters(deviceContext, worldMatrix, viewMatrix, projectionMatrix, texture, lightDirection, ambientColor, diffuseColor);
     if (!result)
     {
         return false;
     }
 
-    // 준비된 버퍼들을 셰이더를 통해 렌더링합니다.
+    // Now render the prepared buffers with the shader.
     RenderShader(deviceContext, indexCount);
 
     return true;
@@ -365,7 +351,7 @@ void LightShaderClass::OutputShaderErrorMessage(ID3D10Blob* errorMessage, HWND h
 
 // SetShaderParameters 함수는 이제 lightDirection과 diffuseColor를 입력으로 받습니다.
 bool LightShaderClass::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMMATRIX worldMatrix, XMMATRIX viewMatrix, XMMATRIX projectionMatrix,
-    ID3D11ShaderResourceView* texture, XMFLOAT3 lightDirection, XMFLOAT4 diffuseColor)
+    ID3D11ShaderResourceView* texture, XMFLOAT3 lightDirection, XMFLOAT4 ambientColor, XMFLOAT4 diffuseColor)
 {
     HRESULT result;
     D3D11_MAPPED_SUBRESOURCE mappedResource;
@@ -417,6 +403,7 @@ bool LightShaderClass::SetShaderParameters(ID3D11DeviceContext* deviceContext, X
     dataPtr2 = (LightBufferType*)mappedResource.pData;
 
     // Copy the lighting variables into the constant buffer.
+    dataPtr2->ambientColor = ambientColor;
     dataPtr2->diffuseColor = diffuseColor;
     dataPtr2->lightDirection = lightDirection;
     dataPtr2->padding = 0.0f;

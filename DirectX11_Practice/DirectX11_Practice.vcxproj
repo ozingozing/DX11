@@ -157,6 +157,7 @@
     <ClCompile Include="Normalmapshaderclass.cpp" />
     <ClCompile Include="PositionClass.cpp" />
     <ClCompile Include="ReflectionShaderClass.cpp" />
+    <ClCompile Include="RefractionShaderClass.cpp" />
     <ClCompile Include="RenderTextureClass.cpp" />
     <ClCompile Include="ShaderManagerClass.cpp" />
     <ClCompile Include="SpecMapShaderClass.cpp" />
@@ -168,6 +169,7 @@
     <ClCompile Include="TimerClass.cpp" />
     <ClCompile Include="TranslateShaderClass.cpp" />
     <ClCompile Include="TransparentShaderClass.cpp" />
+    <ClCompile Include="WaterShaderClass.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Alphamapshaderclass.h" />
@@ -193,6 +195,7 @@
     <ClInclude Include="Normalmapshaderclass.h" />
     <ClInclude Include="PositionClass.h" />
     <ClInclude Include="ReflectionShaderClass.h" />
+    <ClInclude Include="RefractionShaderClass.h" />
     <ClInclude Include="RenderTextureClass.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="ShaderManagerClass.h" />
@@ -205,6 +208,7 @@
     <ClInclude Include="TimerClass.h" />
     <ClInclude Include="TranslateShaderClass.h" />
     <ClInclude Include="TransparentShaderClass.h" />
+    <ClInclude Include="WaterShaderClass.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="AlphaMap.hlsl">
@@ -250,6 +254,9 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
     </FxCompile>
+    <FxCompile Include="Refraction.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </FxCompile>
     <FxCompile Include="Specmap.hlsl">
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">SpecMapPixelShader</EntryPointName>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
@@ -265,6 +272,9 @@
     <FxCompile Include="Transparent.hlsl">
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">TransparentPixelShader</EntryPointName>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+    </FxCompile>
+    <FxCompile Include="Water.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

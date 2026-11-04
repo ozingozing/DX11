@@ -18,6 +18,7 @@ cbuffer MatrixBuffer : register(b0)
 // 이 버퍼는 4개 점광원(Point Light)의 위치를 저장합니다.
 cbuffer LightPositionBuffer : register(b1)
 {
+    float4 ambientColor;
     float4 diffuseColor;
     float3 lightDirection;
     float padding;
@@ -83,19 +84,30 @@ float4 LightPixelShader(PixelInputType input) : SV_TARGET
     float lightIntensity;
     float4 color;
 
-    // 현재 UV 좌표에서 텍스처 색상을 샘플링함
+
+	// Sample the pixel color from the texture using the sampler at this texture coordinate location.
     textureColor = shaderTexture.Sample(SampleType, input.tex);
 
-    input.normal = normalize(input.normal);
+	// Set the default output color to the ambient light value for all pixels.
+    color = ambientColor;
 
+	// Invert the light direction for calculations.
     lightDir = -lightDirection;
-    lightDir = normalize(lightDir);
 
+    // Calculate the amount of light on this pixel.
     lightIntensity = saturate(dot(input.normal, lightDir));
 
-    // 모든 광원의 기여도를 합산함
-    color = diffuseColor * lightIntensity;
-    color = saturate(color) * textureColor;
+    if (lightIntensity > 0.0f)
+    {
+        // Determine the final diffuse color based on the diffuse color and the amount of light intensity.
+        color += (diffuseColor * lightIntensity);
+    }
+
+    // Saturate the final light color.
+    color = saturate(color);
+
+    // Multiply the texture pixel and the final diffuse color to get the final pixel color result.
+    color = color * textureColor;
 
     return color;
 }

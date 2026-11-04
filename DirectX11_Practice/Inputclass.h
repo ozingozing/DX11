@@ -44,6 +44,7 @@ public:
     void GetMouseLocation(int& mouseX, int& mouseY);
     bool IsMousePressed();
     bool IsKeyDown(unsigned char key);
+    void GetMouseDelta(int& dx, int& dy);
 
 private:
     // 실제 장치로부터 데이터를 읽어오는 내부 함수

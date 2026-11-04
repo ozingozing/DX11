@@ -46,7 +46,7 @@ public:
     // 2. 라이트 셰이더를 사용한 렌더링 (텍스처 + 디퓨즈 라이트)
     bool RenderLightShader(ID3D11DeviceContext* deviceContext, int indexCount,
         XMMATRIX worldMatrix, XMMATRIX viewMatrix, XMMATRIX projectionMatrix,
-        ID3D11ShaderResourceView* texture, XMFLOAT3 lightDirection, XMFLOAT4 diffuseColor);
+        ID3D11ShaderResourceView* texture, XMFLOAT3 lightDirection, XMFLOAT4 ambientColor,XMFLOAT4 diffuseColor);
 
     // 3. 노멀 맵 셰이더를 사용한 렌더링 (텍스처 + 노멀 맵 + 디퓨즈 라이트)
     bool RenderNormalMapShader(ID3D11DeviceContext* deviceContext, int indexCount,
