@@ -129,6 +129,9 @@
     <ClCompile Include="RefractionShaderClass.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="GlassShaderClass.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Systemclass.h">
@@ -242,6 +245,9 @@
     <ClInclude Include="RefractionShaderClass.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
+    <ClInclude Include="GlassShaderClass.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Color.hlsl">
@@ -290,6 +296,9 @@
       <Filter>HLSL</Filter>
     </FxCompile>
     <FxCompile Include="Refraction.hlsl">
+      <Filter>HLSL</Filter>
+    </FxCompile>
+    <FxCompile Include="Glass.hlsl">
       <Filter>HLSL</Filter>
     </FxCompile>
   </ItemGroup>
