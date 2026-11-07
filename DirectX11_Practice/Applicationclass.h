@@ -45,7 +45,7 @@ public:
 
 private:
     bool IsKeyDown(unsigned char key);
-    bool Render(float);
+    bool Render(float, float);
     void UpdateCamera(InputClass* Input);
 
 private:

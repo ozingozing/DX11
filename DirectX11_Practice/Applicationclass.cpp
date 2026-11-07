@@ -77,8 +77,8 @@ bool ApplicationClass::Initialize(int screenWidth, int screenHeight, HWND hwnd)
 	strcpy_s(modelFilename, "../Resource/square.txt");
 
 	// Set the file name of the textures for the window model.
-	strcpy_s(textureFilename1, "../Resource/glass01.tga");
-	strcpy_s(textureFilename2, "../Resource/normal03.tga");
+	strcpy_s(textureFilename1, "../Resource/NewGlassTexture.jpg");
+	strcpy_s(textureFilename2, "../Resource/NewGlassNormal.jpg");
 	// Create and initialize the window model object.
 	m_WindowModel = new ModelClass;
 
@@ -187,6 +187,7 @@ void ApplicationClass::Shutdown()
 bool ApplicationClass::Frame(InputClass* Input)
 {
 	static float rotation = 0.0f;
+	static float glassTranslation = 0.0f;
 	const float moveSpeed = 0.05f;
 	bool result;
 
@@ -206,6 +207,12 @@ bool ApplicationClass::Frame(InputClass* Input)
 		rotation += 360.0f;
 	}
 
+	glassTranslation += 0.002f;
+	if (glassTranslation > 1.0f)
+	{
+		glassTranslation -= 1.0f;
+	}
+
 	// Render the refraction of the scene to a texture.
 	result = RenderSceneToTexture(rotation);
 	if (!result)
@@ -213,7 +220,7 @@ bool ApplicationClass::Frame(InputClass* Input)
 		return false;
 	}
 	// Render the graphics scene.
-	result = Render(rotation);
+	result = Render(rotation, glassTranslation);
 	if (!result)
 	{
 		return false;
@@ -292,7 +299,7 @@ void ApplicationClass::UpdateCamera(InputClass* Input)
 
 // Render 함수는 씬을 백 버퍼(Back Buffer)에 렌더링하고,
 // 반사 및 굴절 렌더 투 텍스처(Render to Texture)를 사용하여 물을 렌더링하는 곳입니다.
-bool ApplicationClass::Render(float rotation)
+bool ApplicationClass::Render(float rotation, float glassTranslation)
 {
 	XMMATRIX worldMatrix, viewMatrix, projectionMatrix;
 	float refractionScale;
@@ -328,7 +335,7 @@ bool ApplicationClass::Render(float rotation)
 	m_WindowModel->Render(m_Direct3D->GetDeviceContext());
 
 	result = m_GlassShader->Render(m_Direct3D->GetDeviceContext(), m_WindowModel->GetIndexCount(), worldMatrix, viewMatrix, projectionMatrix, m_WindowModel->GetTexture(0),
-		m_WindowModel->GetTexture(1), m_RenderTexture->GetShaderResourceView(), refractionScale);
+		m_WindowModel->GetTexture(1), m_RenderTexture->GetShaderResourceView(), refractionScale, glassTranslation);
 	if (!result)
 	{
 		return false;

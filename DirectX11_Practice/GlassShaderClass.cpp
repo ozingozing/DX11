@@ -72,14 +72,14 @@ void GlassShaderClass::Shutdown()
 // 이 값들은 나중에 호출되는 RenderShader 함수에서 렌더링이 수행되기 전에, SetShaderParameters 함수를 사용하여 셰이더에 먼저 설정됩니다.
 bool GlassShaderClass::Render(ID3D11DeviceContext* deviceContext, int indexCount, XMMATRIX worldMatrix, XMMATRIX viewMatrix, XMMATRIX projectionMatrix,
     ID3D11ShaderResourceView* colorTexture, ID3D11ShaderResourceView* normalTexture,
-    ID3D11ShaderResourceView* refractionTexture, float refractionScale)
+    ID3D11ShaderResourceView* refractionTexture, float refractionScale, float glassTranslation)
 {
     bool result;
 
 
     // 렌더링에 사용할 셰이더 파라미터를 설정합니다.
     result = SetShaderParameters(deviceContext, worldMatrix, viewMatrix, projectionMatrix, colorTexture,
-        normalTexture, refractionTexture, refractionScale);
+        normalTexture, refractionTexture, refractionScale, glassTranslation);
     if (!result)
     {
         return false;
@@ -347,7 +347,7 @@ void GlassShaderClass::OutputShaderErrorMessage(ID3D10Blob* errorMessage, HWND h
 
 bool GlassShaderClass::SetShaderParameters(ID3D11DeviceContext* deviceContext, XMMATRIX worldMatrix, XMMATRIX viewMatrix, XMMATRIX projectionMatrix,
     ID3D11ShaderResourceView* colorTexture, ID3D11ShaderResourceView* normalTexture, ID3D11ShaderResourceView* refractionTexture,
-    float refractionScale)
+    float refractionScale, float glassTranslation)
 {
     HRESULT result;
     D3D11_MAPPED_SUBRESOURCE mappedResource;
@@ -407,7 +407,8 @@ bool GlassShaderClass::SetShaderParameters(ID3D11DeviceContext* deviceContext, X
 
     // 변수들을 유리 상수 버퍼에 복사합니다.
     dataPtr2->refractionScale = refractionScale;
-    dataPtr2->padding = XMFLOAT3(0.0f, 0.0f, 0.0f);
+	dataPtr2->translation = glassTranslation;
+    dataPtr2->padding = XMFLOAT2(0.0f, 0.0f);
 
     // 상수 버퍼의 락을 풉니다.
     deviceContext->Unmap(m_glassBuffer, 0);
