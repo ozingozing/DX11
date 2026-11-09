@@ -13,10 +13,7 @@
 #include "InputClass.h"
 #include "CameraClass.h"
 #include "ModelClass.h"
-#include "LightClass.h"
-#include "RenderTextureClass.h"
-#include "TextureShaderClass.h"
-#include "GlassShaderClass.h"
+#include "FireShaderClass.h"
 
 
 /////////////
@@ -41,11 +38,10 @@ public:
     bool Initialize(int, int, HWND);
     void Shutdown();
     bool Frame(InputClass*);
-    bool RenderSceneToTexture(float rotation);
 
 private:
     bool IsKeyDown(unsigned char key);
-    bool Render(float, float);
+    bool Render();
     void UpdateCamera(InputClass* Input);
 
 private:
@@ -57,8 +53,6 @@ private:
     CameraClass* m_Camera;
     ModelClass* m_Model;
 	ModelClass* m_WindowModel;
-	RenderTextureClass* m_RenderTexture;
-	TextureShaderClass* m_TextureShader;
-    GlassShaderClass* m_GlassShader;
+    FireShaderClass* m_FireShader;
 };
 #endif

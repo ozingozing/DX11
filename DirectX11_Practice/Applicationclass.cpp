@@ -10,9 +10,7 @@ ApplicationClass::ApplicationClass()
 	m_Camera = 0;
 	m_Model = 0;
 	m_WindowModel = 0;
-	m_RenderTexture = 0;
-	m_TextureShader = 0;
-	m_GlassShader = 0;
+	m_FireShader = 0;
 }
 
 
@@ -31,7 +29,7 @@ ApplicationClass::~ApplicationClass()
 // so this model loads in a 3D cube object for rendering.
 bool ApplicationClass::Initialize(int screenWidth, int screenHeight, HWND hwnd)
 {
-	char modelFilename[128], textureFilename1[128], textureFilename2[128];
+	char modelFilename[128], textureFilename1[128], textureFilename2[128], textureFilename3[128];
 	bool result;
 
 
@@ -52,70 +50,35 @@ bool ApplicationClass::Initialize(int screenWidth, int screenHeight, HWND hwnd)
 
 	m_Camera->SetPosition(-4.0f, 5.0f, -4.0f);
 	m_Camera->SetRotation(5.f, 45.0f, 0.0f);
-	m_camPos = XMFLOAT3(-15.0f, 6.0f, -15.0f);
+	m_camPos = XMFLOAT3(-4.0f, 5.0f, -4.0f);
 	m_yaw = 45.0f;
 	m_pitch = 15.0f;
 
-	// Set the file name of the cube model.
-	strcpy_s(modelFilename, "../Resource/cube.txt");
-
-	// Set the file name of the textures for the cube model.
-	strcpy_s(textureFilename1, "../Resource/stone01.tga");
-	strcpy_s(textureFilename2, "../Resource/normal03.tga");
-
-	// Create and initialize the cube model object.
-	m_Model = new ModelClass;
-
-	result = m_Model->Initialize(m_Direct3D->GetDevice(), m_Direct3D->GetDeviceContext(), modelFilename, textureFilename1, textureFilename2);
-	if (!result)
-	{
-		MessageBox(hwnd, L"Could not initialize the cube model object.", L"Error", MB_OK);
-		return false;
-	}
-
-	// Set the file name of the window model.
+	// Set the file name of the model.
 	strcpy_s(modelFilename, "../Resource/square.txt");
 
-	// Set the file name of the textures for the window model.
-	strcpy_s(textureFilename1, "../Resource/NewGlassTexture.jpg");
-	strcpy_s(textureFilename2, "../Resource/NewGlassNormal.jpg");
-	// Create and initialize the window model object.
-	m_WindowModel = new ModelClass;
+	// Set the file name of the textures for the model.
+	strcpy_s(textureFilename1, "../Resource/Fire01.tga");
+	strcpy_s(textureFilename2, "../Resource/FireNoise01.tga");
+	strcpy_s(textureFilename3, "../Resource/FireAlpha01.tga");
 
-	result = m_WindowModel->Initialize(m_Direct3D->GetDevice(), m_Direct3D->GetDeviceContext(), modelFilename, textureFilename1, textureFilename2);
+	// Create and initialize the model object.
+	m_Model = new ModelClass;
+
+	result = m_Model->Initialize(m_Direct3D->GetDevice(), m_Direct3D->GetDeviceContext(), modelFilename, textureFilename1, textureFilename2, textureFilename3);
 	if (!result)
 	{
-		MessageBox(hwnd, L"Could not initialize the window model object.", L"Error", MB_OK);
+		MessageBox(hwnd, L"Could not initialize the model object.", L"Error", MB_OK);
 		return false;
 	}
 
-	// Create and initialize the render to texture object.
-	m_RenderTexture = new RenderTextureClass;
+	// Create and initialize the fire shader object.
+	m_FireShader = new FireShaderClass;
 
-	result = m_RenderTexture->Initialize(m_Direct3D->GetDevice(), screenWidth, screenHeight, SCREEN_DEPTH, SCREEN_NEAR, 1);
+	result = m_FireShader->Initialize(m_Direct3D->GetDevice(), hwnd);
 	if (!result)
 	{
-		MessageBox(hwnd, L"Could not initialize the render texture object.", L"Error", MB_OK);
-		return false;
-	}
-
-	// Create and initialize the texture shader object.
-	m_TextureShader = new TextureShaderClass;
-
-	result = m_TextureShader->Initialize(m_Direct3D->GetDevice(), hwnd);
-	if (!result)
-	{
-		MessageBox(hwnd, L"Could not initialize the texture shader object.", L"Error", MB_OK);
-		return false;
-	}
-
-	// Create and initialize the glass shader object.
-	m_GlassShader = new GlassShaderClass;
-
-	result = m_GlassShader->Initialize(m_Direct3D->GetDevice(), hwnd);
-	if (!result)
-	{
-		MessageBox(hwnd, L"Could not initialize the glass shader object.", L"Error", MB_OK);
+		MessageBox(hwnd, L"Could not initialize the fire shader object.", L"Error", MB_OK);
 		return false;
 	}
 
@@ -125,39 +88,15 @@ bool ApplicationClass::Initialize(int screenWidth, int screenHeight, HWND hwnd)
 
 void ApplicationClass::Shutdown()
 {
-	// Release the glass shader object.
-	if (m_GlassShader)
+	// Release the fire shader object.
+	if (m_FireShader)
 	{
-		m_GlassShader->Shutdown();
-		delete m_GlassShader;
-		m_GlassShader = 0;
+		m_FireShader->Shutdown();
+		delete m_FireShader;
+		m_FireShader = 0;
 	}
 
-	// Release the texture shader object.
-	if (m_TextureShader)
-	{
-		m_TextureShader->Shutdown();
-		delete m_TextureShader;
-		m_TextureShader = 0;
-	}
-
-	// Release the render to texture object.
-	if (m_RenderTexture)
-	{
-		m_RenderTexture->Shutdown();
-		delete m_RenderTexture;
-		m_RenderTexture = 0;
-	}
-
-	// Release the window model object.
-	if (m_WindowModel)
-	{
-		m_WindowModel->Shutdown();
-		delete m_WindowModel;
-		m_WindowModel = 0;
-	}
-
-	// Release the cube model object.
+	// Release the model object.
 	if (m_Model)
 	{
 		m_Model->Shutdown();
@@ -213,52 +152,12 @@ bool ApplicationClass::Frame(InputClass* Input)
 		glassTranslation -= 1.0f;
 	}
 
-	// Render the refraction of the scene to a texture.
-	result = RenderSceneToTexture(rotation);
-	if (!result)
-	{
-		return false;
-	}
 	// Render the graphics scene.
-	result = Render(rotation, glassTranslation);
+	result = Render();
 	if (!result)
 	{
 		return false;
 	}
-	return true;
-}
-
-bool ApplicationClass::RenderSceneToTexture(float rotation)
-{
-	XMMATRIX worldMatrix, viewMatrix, projectionMatrix;
-	bool result;
-
-
-	// Set the render target to be the render to texture and clear it.
-	m_RenderTexture->SetRenderTarget(m_Direct3D->GetDeviceContext());
-	m_RenderTexture->ClearRenderTarget(m_Direct3D->GetDeviceContext(), 0.0f, 0.0f, 0.0f, 1.0f);
-
-	// Get the world, view, and projection matrices from the camera and d3d objects.
-	m_Direct3D->GetWorldMatrix(worldMatrix);
-	m_Camera->GetViewMatrix(viewMatrix);
-	m_Direct3D->GetProjectionMatrix(projectionMatrix);
-
-	// Rotate the world matrix by the rotation value so that the cube will spin.
-	worldMatrix = XMMatrixRotationY(rotation);
-
-	// Render the cube model using the texture shader.
-	m_Model->Render(m_Direct3D->GetDeviceContext());
-
-	result = m_TextureShader->Render(m_Direct3D->GetDeviceContext(), m_Model->GetIndexCount(), worldMatrix, viewMatrix, projectionMatrix, m_Model->GetTexture(0));
-	if (!result)
-	{
-		return false;
-	}
-
-	// Reset the render target back to the original back buffer and not the render to texture anymore.  And reset the viewport back to the original.
-	m_Direct3D->SetBackBufferRenderTarget();
-	m_Direct3D->ResetViewport();
-
 	return true;
 }
 
@@ -299,14 +198,36 @@ void ApplicationClass::UpdateCamera(InputClass* Input)
 
 // Render 함수는 씬을 백 버퍼(Back Buffer)에 렌더링하고,
 // 반사 및 굴절 렌더 투 텍스처(Render to Texture)를 사용하여 물을 렌더링하는 곳입니다.
-bool ApplicationClass::Render(float rotation, float glassTranslation)
+bool ApplicationClass::Render()
 {
 	XMMATRIX worldMatrix, viewMatrix, projectionMatrix;
-	float refractionScale;
+	XMFLOAT3 scrollSpeeds, scales;
+	XMFLOAT2 distortion1, distortion2, distortion3;
+	float distortionScale, distortionBias;
 	bool result;
+	static float frameTime = 0.0f;
 
-	// Set the refraction scale for the glass shader.
-	refractionScale = 0.01f;
+	// Increment the frame time counter.
+	frameTime += 0.01f;
+	if (frameTime > 1000.0f)
+	{
+		frameTime = 0.0f;
+	}
+
+	// Set the three scrolling speeds for the three different noise textures.
+	scrollSpeeds = XMFLOAT3(1.3f, 2.1f, 2.3f);
+
+	// Set the three scales which will be used to create the three different noise octave textures.
+	scales = XMFLOAT3(1.0f, 2.0f, 3.0f);
+
+	// Set the three different x and y distortion factors for the three different noise textures.
+	distortion1 = XMFLOAT2(0.1f, 0.2f);
+	distortion2 = XMFLOAT2(0.1f, 0.3f);
+	distortion3 = XMFLOAT2(0.1f, 0.1f);
+
+	// The the scale and bias of the texture coordinate sampling perturbation.
+	distortionScale = 0.8f;
+	distortionBias = 0.5f;
 
 	// Clear the buffers to begin the scene.
 	m_Direct3D->BeginScene(0.0f, 0.0f, 0.0f, 1.0f);
@@ -316,30 +237,27 @@ bool ApplicationClass::Render(float rotation, float glassTranslation)
 	m_Camera->GetViewMatrix(viewMatrix);
 	m_Direct3D->GetProjectionMatrix(projectionMatrix);
 
-	// Rotate the world matrix by the rotation value so that the cube will spin.
-	worldMatrix = XMMatrixRotationY(rotation);
+	float fireX = 0.0f, fireY = 0.0f, fireZ = 0.0f;
+	float angle = atan2f(fireX - m_camPos.x, fireZ - m_camPos.z);
+
+	worldMatrix = XMMatrixRotationY(angle) * XMMatrixTranslation(fireX, fireY, fireZ);
+
+	// Turn on alpha blending for the fire transparency.
+	m_Direct3D->EnableAlphaBlending();
 
 	// Render the cube model using the texture shader.
 	m_Model->Render(m_Direct3D->GetDeviceContext());
 
-	result = m_TextureShader->Render(m_Direct3D->GetDeviceContext(), m_Model->GetIndexCount(), worldMatrix, viewMatrix, projectionMatrix, m_Model->GetTexture(0));
+	result = m_FireShader->Render(m_Direct3D->GetDeviceContext(), m_Model->GetIndexCount(), worldMatrix, viewMatrix, projectionMatrix, m_Model->GetTexture(0),
+		m_Model->GetTexture(1), m_Model->GetTexture(2), frameTime, scrollSpeeds, scales, distortion1, distortion2, distortion3,
+		distortionScale, distortionBias);
 	if (!result)
 	{
 		return false;
 	}
 
-	// Translate to back where the window model will be rendered.
-	worldMatrix = XMMatrixTranslation(0.0f, 0.0f, -1.5f);
-
-	// Render the window model using the glass shader.
-	m_WindowModel->Render(m_Direct3D->GetDeviceContext());
-
-	result = m_GlassShader->Render(m_Direct3D->GetDeviceContext(), m_WindowModel->GetIndexCount(), worldMatrix, viewMatrix, projectionMatrix, m_WindowModel->GetTexture(0),
-		m_WindowModel->GetTexture(1), m_RenderTexture->GetShaderResourceView(), refractionScale, glassTranslation);
-	if (!result)
-	{
-		return false;
-	}
+	// Turn off alpha blending.
+	m_Direct3D->DisableAlphaBlending();
 
 	// Present the rendered scene to the screen.
 	m_Direct3D->EndScene();

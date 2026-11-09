@@ -110,11 +110,11 @@ float4 GlassPixelShader(PixelInputType input) : SV_TARGET
 
     // 다음으로 노멀 맵을 샘플링하고 (0, 1) 텍스처 좌표 범위를 (-1, 1) 좌표 범위로 이동합니다.
     
-    float2 normalTexCoord = input.tex;
-    normalTexCoord.y -= translation;
+    //float2 normalTexCoord = input.tex;
+    //normalTexCoord.y -= translation;
     
     // 노멀 맵 텍스처에서 노멀을 샘플링합니다.
-    normalMap = normalTexture.Sample(SampleType, normalTexCoord);
+    normalMap = normalTexture.Sample(SampleType, input.tex);
 
     // 노멀의 범위를 (0, 1)에서 (-1, +1)로 확장합니다.
     normal = (normalMap.xyz * 2.0f) - 1.0f;
